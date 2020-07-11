@@ -56,7 +56,7 @@ make
 </code></pre><p>Итого сейчас у меня в проекте файловая структура выглядит как то так:</p><img src="/blog/images/create-blog-using-swift-and-publish-and-deploy-to-github-pages/final-structure.png" width="400"/><h2><a name="deploy"></a> 3. Зальём свой новый блог на GitРub Pages</h2><p>Итак, воспользуемся встроенным инструментом Publish для заливки нашего блога. В <em>main.swift</em> добавим</p><pre><code>.<span class="call">deploy</span>(using: .<span class="call">gitHub</span>(<span class="string">"login/login.github.io"</span>, useSSH: <span class="keyword">false</span>))
 </code></pre><p>итого у меня получилось</p><pre><code><span class="keyword">try</span> <span class="type">Blog</span>().<span class="call">publish</span>(
     withTheme: .<span class="dotAccess">blog</span>,
-    deployedUsing: .<span class="call">gitHub</span>(<span class="string">"sarklone/sparklone.github.io"</span>, useSSH: <span class="keyword">false</span>),
+    deployedUsing: .<span class="call">gitHub</span>(<span class="string">"sparklone/sparklone.github.io"</span>, useSSH: <span class="keyword">false</span>),
     plugins: [.<span class="call">splash</span>(withClassPrefix: <span class="string">""</span>)]
 )
 </code></pre><p>Проверяем в последний раз, что все работает. Последний штрих - мне кажется, что нет смысла хранить в git нашего репозитория с темплейтами как строить сайт содержимое папки Output, для этого у нас будет отдельный репозиторий как раз таки <em>login.github.io</em> Если вы согласны - исключим эту папку из .gitignore, добавив туда строку <em>/Output</em> в конце Если все ок выполняем в консоли (из папки где мы выполняли publish new)</p><pre><code>git add .
