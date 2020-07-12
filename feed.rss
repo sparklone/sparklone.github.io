@@ -1,4 +1,228 @@
-<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content"><channel><title>Каморка сурового программиста, дубль 2</title><description>Блог о технологиях, преимущественно о Swift и обо всём, что связано с Apple</description><link>https://sparklone.github.io</link><language>ru</language><lastBuildDate>Sun, 12 Jul 2020 02:51:19 +0300</lastBuildDate><pubDate>Sun, 12 Jul 2020 02:51:19 +0300</pubDate><ttl>250</ttl><atom:link href="https://sparklone.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://sparklone.github.io/articles/create-blog-using-swift-and-publish-and-deploy-to-github-pages</guid><title>Создаем блог на Swift с помощью Publish с размещением на GitHub Pages</title><description>Создаем блог на Swift с помощью Publish на GitHub Pages</description><link>https://sparklone.github.io/articles/create-blog-using-swift-and-publish-and-deploy-to-github-pages</link><pubDate>Wed, 1 Jul 2020 19:23:00 +0300</pubDate><content:encoded><![CDATA[<h1>Создаем блог на Swift с помощью Publish с размещением на GitHub Pages</h1><p>У меня уже есть блог, он на WordPress и я устал от всей этой свистопляски с обновлением версии, плагинов, возможности взлома и прочего. Это буквально убивает желание продолжать его развивать. Моя цель - делиться с миром своими мыслями и находками, но при этом иметь полный контроль над своим сайтом. С недавних пор Github Pages предоставила возможность хранить простенькие сайты у них. Никаких баз данных и PHP, статический сайт, как в старые добрые. Для блога - идеально. А т.к. процесс деплоя будет проходить через GitHub - будет прозрачная история всех изменений, и полный контроль над тем, что реально находится на сайте, трояны и прочая нечисть не пройдут.</p><p>Но они предлагают использовать Jekyll, статический генератор сайтов написанный на Ruby. Все же хочется отачивать мастерство в том языке, который ты используешь ежедневно, поэтому в качестве альтернативы я взял свежий статический генератор написанный на Swift от John Sundell.</p><p>Нам предстоит сделать 3 вещи:</p><ol><li><a href="#create-blog">создать блог на GitРub Pages</a></li><li><a href="#publish">разобраться с тем как работать с Publish</a></li><li><a href="#deploy">залить свой новый блог на GitРub Pages</a> <br/><br/> Итак, перейдем к пункту 1</li></ol><h2><a name="create-blog"></a> 1. Создадим блог на Github Pages.</h2><p>Официальная инструкция доступен по адресу <a href="https://pages.github.com">https://pages.github.com</a></p><p>Основное условие - login блога должен совпадать с вашим логином на GitHub. В моем случае это sparklone</p><ul><li>логинимся в GitHub</li><li>идем по адресу <a href="https://github.com/new">https://github.com/new</a></li><li>в качестве имени репозитория вводите <em>login</em>.github.io, в моем случае было sparklone.github.io</li><li>убеждаемся, что он будет Public</li><li>жмем Create Repository</li><li>все, наш блог уже доступен по адресу https://<em>login</em>.github.io</li></ul><br/><p>Но пока на сайте нет ни одного файл Можно переходить ко второму пункту</p><h2><a name="publish"></a> 2. Разберёмся с тем как работать с Publish</h2><p>Еще раз <a href="https://github.com/JohnSundell/Publish">Publish</a> - это статический генератор сайтов написанный на Swift, что позволяет выстраивать любую логику при генерации сайта, теги, карта сайта, rss, специфическая перелинковка. Все на что на хватит фантазии. Одна из моих идей на будущее - попробовать писать статьи на двух языках, и чтобы настроенный шаблон умел это понимать и вставлять переключатель в статью к примеру. Не знаю дойдут ли когда нибудь до этого руки, но как идея - интересно.</p><p>Я предпочел установить напрямую через git, создал папку ~/Developer/tools и там выполнил</p><pre><code>git clone https://github.<span class="property">com</span>/<span class="type">JohnSundell</span>/<span class="type">Publish</span>.<span class="property">git</span>
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content"><channel><title>Каморка сурового программиста, дубль 2</title><description>Блог о технологиях, преимущественно о Swift и обо всём, что связано с Apple</description><link>https://sparklone.github.io</link><language>ru</language><lastBuildDate>Sun, 12 Jul 2020 19:58:54 +0300</lastBuildDate><pubDate>Sun, 12 Jul 2020 19:58:54 +0300</pubDate><ttl>250</ttl><atom:link href="https://sparklone.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://sparklone.github.io/articles/debug-swiftui-views</guid><title>Отладка SwiftUI views</title><description>Как отслеживать создание и отрисовку SwiftUI views</description><link>https://sparklone.github.io/articles/debug-swiftui-views</link><pubDate>Sat, 11 Jul 2020 19:58:00 +0300</pubDate><content:encoded><![CDATA[<h1>Отладка SwiftUI views</h1><p>SwiftUI прикладывает массу усилий, чтобы UI не лагал при перерисовке. Если мы хотим лучше понимать как работает фреймворк под капотом - стоит копнуть чуть глубже.</p><p>По сути нас интересуют два события - когда View пересоздается, и когда запрашивается на самом деле body для перерисовки.</p><p>Это побудило меня создать обертку позволяющую отслеживать эти события</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">public struct</span> DebugView&lt;MainView: <span class="type">View</span>&gt;: <span class="type">View</span> {
+    <span class="keyword">private let</span> view: <span class="type">MainView</span>
+    <span class="keyword">private let</span> logType: <span class="type">LogType</span>
+
+    <span class="keyword">private enum</span> LogType {
+        <span class="keyword">case</span> onlyDescription(<span class="type">String</span>)
+        <span class="keyword">case</span> descriptionAndDumpView(<span class="type">String</span>)
+        <span class="keyword">case</span> dumpView
+    }
+
+    <span class="keyword">private var</span> about: <span class="type">String</span> {
+        <span class="keyword">switch</span> logType {
+            <span class="keyword">case let</span> .<span class="call">onlyDescription</span>(description):
+                <span class="keyword">return</span> <span class="string">"</span>\(description)<span class="string">"</span>
+            <span class="keyword">case let</span> .<span class="call">descriptionAndDumpView</span>(description):
+                <span class="keyword">return</span> <span class="string">"</span>\(description)<span class="string">:</span> \(view)<span class="string">"</span>
+            <span class="keyword">case</span> .<span class="dotAccess">dumpView</span>:
+                <span class="keyword">return</span> <span class="string">"</span>\(view)<span class="string">"</span>
+            }
+        }
+
+    <span class="keyword">public init</span>(view: <span class="type">MainView</span>, description: <span class="type">String</span>?, dumpView: <span class="type">Bool</span> = <span class="keyword">true</span>) {
+        <span class="keyword">self</span>.<span class="property">view</span> = view
+        <span class="keyword">if let</span> description = description {
+            <span class="keyword">if</span> dumpView {
+                logType = .<span class="call">descriptionAndDumpView</span>(description)
+            } <span class="keyword">else</span> {
+                logType = .<span class="call">onlyDescription</span>(description)
+            }
+        } <span class="keyword">else</span> {
+            logType = .<span class="dotAccess">dumpView</span>
+        }
+        <span class="call">print</span>(<span class="string">"init:</span> \(about)<span class="string">"</span>)
+    }
+
+    <span class="keyword">public var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="call">print</span>(<span class="string">"body:</span> \(about)<span class="string">"</span>)
+        <span class="keyword">return</span> view
+    }
+}
+
+<span class="keyword">extension</span> <span class="type">View</span> {
+    <span class="keyword">public func</span> debug() -&gt; <span class="type">DebugView</span>&lt;<span class="type">Self</span>&gt; {
+        <span class="keyword">return</span> <span class="type">DebugView</span>(view: <span class="keyword">self</span>, description: <span class="keyword">nil</span>)
+    }
+
+    <span class="keyword">public func</span> debug(<span class="keyword">_</span> description: <span class="type">String</span>, dumpView: <span class="type">Bool</span> = <span class="keyword">false</span>) -&gt; <span class="type">DebugView</span>&lt;<span class="type">Self</span>&gt; {
+        <span class="keyword">return</span> <span class="type">DebugView</span>(
+            view: <span class="keyword">self</span>,
+            description: description,
+            dumpView: dumpView
+        )
+    }
+}
+</code></pre><p>Вот ее <a href="https://gist.github.com/sparklone/6f64156ed6de87c1020198d93f4c45a3">Gist</a></p><p>По большому счету, это View - прокси. Давайте попробуем поработать с этим. Создадим playground в котором мы посмотрим работу с SwiftUI views в динамике</p><pre><code><span class="keyword">import</span> SwiftUI
+<span class="keyword">import</span> PlaygroundSupport
+
+<span class="keyword">private struct</span> MyListView: <span class="type">View</span> {
+    <span class="keyword">@State var</span> numberOfViews: <span class="type">Int</span> = <span class="number">1</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(spacing: <span class="number">30</span>) {
+            <span class="type">ForEach</span>(<span class="number">0</span>..&lt;numberOfViews, id: \.<span class="keyword">self</span>) { id <span class="keyword">in</span>
+                <span class="type">Text</span>(<span class="string">"</span>\(id)<span class="string">"</span>).<span class="call">debug</span>(<span class="string">"Text:</span> \(id)<span class="string">"</span>)
+            }
+            <span class="type">HStack</span> {
+                <span class="type">Text</span>(<span class="string">"</span>\(numberOfViews)<span class="string">"</span>)
+                <span class="type">Button</span>(<span class="string">"numberOfViews"</span>) {
+                    <span class="keyword">self</span>.<span class="property">numberOfViews</span> += <span class="number">1</span>
+                }
+            }
+        }
+    }
+}
+
+<span class="type">PlaygroundPage</span>.<span class="property">current</span>.<span class="call">setLiveView</span>(<span class="type">MyListView</span>().<span class="call">debug</span>(<span class="string">"MyListView"</span>))
+</code></pre><p>При старте в логах мы увидим</p><pre><code>init: <span class="type">MyListView</span>
+body: <span class="type">MyListView</span>
+init: <span class="type">Text</span>: <span class="number">0</span>
+body: <span class="type">Text</span>: <span class="number">0</span>
+
+</code></pre><p>Выглядит разумно, при старте приложения система сначала создает MyListView, берет у нее body, видит что нужен один Text, создает его и затем уже у него просит body.</p><p>Нажимаем один раз на кнопку numberOfViews В логах добавится следующее:</p><pre><code>init: <span class="type">Text</span>: <span class="number">0</span>
+init: <span class="type">Text</span>: <span class="number">1</span>
+body: <span class="type">Text</span>: <span class="number">1</span>
+</code></pre><p>А вот это уже интересно, мы видим, что пересоздания MyListView не происходит, что выглядит логично, а вот Text создается 2 раза (view стало 2 после увеличения счетчика), но body запросился только у нового элемента на экране.</p><p>Если еще раз нажать на кнопку numberOfViews увидим уже ожидаемое</p><pre><code>init: <span class="type">Text</span>: <span class="number">0</span>
+init: <span class="type">Text</span>: <span class="number">1</span>
+init: <span class="type">Text</span>: <span class="number">2</span>
+body: <span class="type">Text</span>: <span class="number">2</span>
+</code></pre><p>Т.е. body будет вызываться только для новых элементов.</p><p>Попробуем понять как и почему так работает система.</p><p>Создадим свою View - MyTextView и сделаем так, чтобы при каждом создании - генерировался уникальный контент</p><pre><code><span class="keyword">private struct</span> MyText: <span class="type">View</span> {
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="keyword">return</span> <span class="type">Text</span>(<span class="string">"</span>\(<span class="type">Int</span>.<span class="call">random</span>(in: <span class="number">0</span>...<span class="number">100</span>))<span class="string">"</span>)
+    }
+}
+</code></pre><p>Меняем вызов на</p><pre><code><span class="type">ForEach</span>(<span class="number">0</span>..&lt;numberOfViews, id: \.<span class="keyword">self</span>) { id <span class="keyword">in</span>
+    <span class="type">MyText</span>().<span class="call">debug</span>(<span class="string">"MyText:</span> \(id)<span class="string">"</span>)
+}
+</code></pre><p>На старте видим в логах</p><pre><code>init: <span class="type">MyListView</span>
+body: <span class="type">MyListView</span>
+init: <span class="type">MyText</span>: <span class="number">0</span>
+body: <span class="type">MyText</span>: <span class="number">0</span>
+
+</code></pre><p>После нажатия на кнопку numberOfViews</p><pre><code>init: <span class="type">MyText</span>: <span class="number">0</span>
+init: <span class="type">MyText</span>: <span class="number">1</span>
+body: <span class="type">MyText</span>: <span class="number">1</span>
+</code></pre><p>При этом, мы ожидаем, что на экране для ранее показанного элемента изменится число (random же как никак), но по факту число не меняется. Т.е. система создает MyText, но по всей видимости отбрасывает не перерисовывая. Почему? Потому что система считает, что все MyText - одинаковы, т.к. эта структура не реализует Equatable.</p><p>Проверим нашу догадку</p><pre><code><span class="keyword">private struct</span> MyTextEquatable: <span class="type">View</span>, <span class="type">Equatable</span> {
+    <span class="keyword">private let</span> id: <span class="type">Int</span>
+    <span class="keyword">init</span>() {
+        id = <span class="type">Int</span>.<span class="call">random</span>(in: <span class="number">0</span>...<span class="number">100</span>)
+    }
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="keyword">return</span> <span class="type">Text</span>(<span class="string">"</span>\(id)<span class="string">"</span>)
+    }
+}
+</code></pre><p>Меняем вызов на</p><pre><code><span class="type">ForEach</span>(<span class="number">0</span>..&lt;numberOfViews, id: \.<span class="keyword">self</span>) { id <span class="keyword">in</span>
+    <span class="type">MyTextEquatable</span>().<span class="call">debug</span>(<span class="string">"MyTextEquatable:</span> \(id)<span class="string">"</span>)
+}
+</code></pre><p>Первый запуск</p><pre><code>init: <span class="type">MyListView</span>
+body: <span class="type">MyListView</span>
+init: <span class="type">MyTextEquatable</span>: <span class="number">0</span>
+body: <span class="type">MyTextEquatable</span>: <span class="number">0</span>
+</code></pre><p>Нажимаем на кнопку</p><pre><code>init: <span class="type">MyTextEquatable</span>: <span class="number">0</span>
+body: <span class="type">MyTextEquatable</span>: <span class="number">0</span>
+init: <span class="type">MyTextEquatable</span>: <span class="number">1</span>
+body: <span class="type">MyTextEquatable</span>: <span class="number">1</span>
+</code></pre><p>Заработало, это видно не только из логов, но и в preivew, после каждого нажатия кнопки - все числа меняются. Теперь кажется все встает на свои места, при каждом обновлении View система создает его детей (именно поэтому инициализаторы для View должны быть максимально легковесными, никакой "тяжелой" логики в конструктор помещать не стоит), сравнивает по протоколу Equatable - изменилось ли внутреннее состояние, если нет - система считает что перерисовка не нужна, т.к. View не обновилось.</p><p>Проверим, создадим следующее</p><pre><code><span class="keyword">private struct</span> StupidView: <span class="type">View</span>, <span class="type">Equatable</span> {
+    <span class="keyword">private let</span> id: <span class="type">Int</span>
+    <span class="keyword">init</span>(id: <span class="type">Int</span>) {
+        <span class="keyword">self</span>.<span class="property">id</span> = id
+    }
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="keyword">return</span> <span class="type">Text</span>(<span class="string">"</span>\(id)<span class="string">"</span>)
+    }
+
+    <span class="keyword">static func</span> == (lhs: <span class="type">StupidView</span>, rhs: <span class="type">StupidView</span>) -&gt; <span class="type">Bool</span> {
+        <span class="keyword">return false</span>
+    }
+}
+</code></pre><p>Меняем вызов на</p><pre><code><span class="type">ForEach</span>(<span class="number">0</span>..&lt;numberOfViews, id: \.<span class="keyword">self</span>) { id <span class="keyword">in</span>
+    <span class="type">StupidView</span>().<span class="call">debug</span>(<span class="string">"StupidView:</span> \(id)<span class="string">"</span>)
+}
+</code></pre><p>При старте</p><pre><code>init: <span class="type">MyListView</span>
+body: <span class="type">MyListView</span>
+init: <span class="type">StupidView</span>: <span class="number">0</span>
+body: <span class="type">StupidView</span>: <span class="number">0</span>
+</code></pre><p>После нажатия</p><pre><code>init: <span class="type">StupidView</span>: <span class="number">0</span>
+init: <span class="type">StupidView</span>: <span class="number">1</span>
+body: <span class="type">StupidView</span>: <span class="number">1</span>
+</code></pre><p>Что за черт, мы же возвращаем false всегда при сравнении! Чтобы поотлаживать SwiftUI view надо будет создать полноценный проект и создать там новый файл с содержимым</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">private struct</span> MyListView: <span class="type">View</span> {
+    <span class="keyword">@State var</span> numberOfViews: <span class="type">Int</span> = <span class="number">1</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(spacing: <span class="number">30</span>) {
+            <span class="type">ForEach</span>(<span class="number">0</span>..&lt;numberOfViews, id: \.<span class="keyword">self</span>) { id <span class="keyword">in</span>
+                <span class="type">StupidView</span>(id: id).<span class="call">debug</span>(<span class="string">"StupidView:</span> \(id)<span class="string">"</span>)
+            }
+            <span class="type">HStack</span> {
+                <span class="type">Text</span>(<span class="string">"</span>\(numberOfViews)<span class="string">"</span>)
+                <span class="type">Button</span>(<span class="string">"numberOfViews"</span>) {
+                    <span class="keyword">self</span>.<span class="property">numberOfViews</span> += <span class="number">1</span>
+                }
+            }
+        }
+    }
+}
+
+<span class="keyword">private struct</span> StupidView: <span class="type">View</span>, <span class="type">Equatable</span> {
+    <span class="keyword">private let</span> id: <span class="type">Int</span>
+    <span class="keyword">init</span>(id: <span class="type">Int</span>) {
+        <span class="keyword">self</span>.<span class="property">id</span> = id
+    }
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="keyword">return</span> <span class="type">Text</span>(<span class="string">"</span>\(id)<span class="string">"</span>)
+    }
+
+    <span class="keyword">static func</span> == (lhs: <span class="type">StupidView</span>, rhs: <span class="type">StupidView</span>) -&gt; <span class="type">Bool</span> {
+        <span class="keyword">return false</span>
+    }
+}
+
+<span class="keyword">struct</span> EquatableSwiftUIStupid_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">MyListView</span>()
+    }
+}
+</code></pre><p>Если в preview вызывать контекстное меню у кнопки play - появится возможность сделать Debug preview.</p><br/><img src="https://sparklone.github.io/blog/images/debug-swiftui-views/debug-preview.png" width="300"/><br/><br/><br/><p>Что мы наблюдаем при отладке? Точки останова срабатывают внутри var body, но не срабатывают внутри static func == Почему то система не вызывает наш метод для сравнения. Очень уж умный SwiftUI. В итоге я нашел как это обойти - использовать вместо Int класс обертку Holder. Видимо в этом случае SwiftUI решает все же положиться на предоставленную реализацию, т.к. у нас уже не простой value type.</p><p>Проверим</p><pre><code><span class="keyword">private class</span> Holder {
+    <span class="keyword">var</span> id: <span class="type">Int</span>
+
+    <span class="keyword">init</span>(id: <span class="type">Int</span>) {
+        <span class="keyword">self</span>.<span class="property">id</span> = id
+    }
+}
+
+<span class="keyword">private struct</span> StupidViewWithHolder: <span class="type">View</span>, <span class="type">Equatable</span> {
+    <span class="keyword">private let</span> holder: <span class="type">Holder</span>
+    <span class="keyword">init</span>(holder: <span class="type">Holder</span>) {
+        <span class="keyword">self</span>.<span class="property">holder</span> = holder
+    }
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="keyword">return</span> <span class="type">Text</span>(<span class="string">"</span>\(holder.<span class="property">id</span>)<span class="string">"</span>)
+    }
+
+    <span class="keyword">static func</span> == (lhs: <span class="type">Self</span>, rhs: <span class="type">Self</span>) -&gt; <span class="type">Bool</span> {
+        <span class="keyword">return false</span>
+    }
+}
+
+</code></pre><p>Меняем вызов на</p><pre><code><span class="type">ForEach</span>(<span class="number">0</span>..&lt;numberOfViews, id: \.<span class="keyword">self</span>) { id <span class="keyword">in</span>
+    <span class="type">StupidViewWithHolder</span>(holder: <span class="type">Holder</span>(id: id))
+                    .<span class="call">debug</span>(<span class="string">"StupidViewWithHolder:</span> \(id)<span class="string">"</span>)
+}
+</code></pre><p>При старте</p><pre><code>init: <span class="type">MyListView</span>
+body: <span class="type">MyListView</span>
+init: <span class="type">StupidViewWithHolder</span>: <span class="number">0</span>
+body: <span class="type">StupidViewWithHolder</span>: <span class="number">0</span>
+
+</code></pre><p>после нажатия</p><pre><code>init: <span class="type">StupidViewWithHolder</span>: <span class="number">0</span>
+body: <span class="type">StupidViewWithHolder</span>: <span class="number">0</span>
+init: <span class="type">StupidViewWithHolder</span>: <span class="number">1</span>
+body: <span class="type">StupidViewWithHolder</span>: <span class="number">1</span>
+</code></pre><p>Наконец то мы добились реальной перерисовки элементов!</p><p>Стоит понимать, что не стоит на это закладываться при разработке, т.к. это внутреннее поведение SwiftUI, которое может измениться в любой момент. Но знания могут помочь понять что может вообще пойти не так и не тратить кучу времени на отладку реально сложных View. Теперь мы знаем очередной подводный камень SwiftUI, к тому же новый инструмент по дебагу View доказал свою состоятельность. Надеюсь было полезно )</p><p>Скачать Playground со всеми примерами из статьи можно здесь: <a href="https://github.com/sparklone/debug-swiftui-views">Playground</a></p>]]></content:encoded></item><item><guid isPermaLink="true">https://sparklone.github.io/articles/create-blog-using-swift-and-publish-and-deploy-to-github-pages</guid><title>Создаем блог на Swift с помощью Publish с размещением на GitHub Pages</title><description>Создаем блог на Swift с помощью Publish на GitHub Pages</description><link>https://sparklone.github.io/articles/create-blog-using-swift-and-publish-and-deploy-to-github-pages</link><pubDate>Fri, 10 Jul 2020 19:23:00 +0300</pubDate><content:encoded><![CDATA[<h1>Создаем блог на Swift с помощью Publish с размещением на GitHub Pages</h1><p>У меня уже есть блог, он на WordPress и я устал от всей этой свистопляски с обновлением версии, плагинов, возможности взлома и прочего. Это буквально убивает желание продолжать его развивать. Моя цель - делиться с миром своими мыслями и находками, но при этом иметь полный контроль над своим сайтом. С недавних пор Github Pages предоставила возможность хранить простенькие сайты у них. Никаких баз данных и PHP, статический сайт, как в старые добрые. Для блога - идеально. А т.к. процесс деплоя будет проходить через GitHub - будет прозрачная история всех изменений, и полный контроль над тем, что реально находится на сайте, трояны и прочая нечисть не пройдут.</p><p>Но они предлагают использовать Jekyll, статический генератор сайтов написанный на Ruby. Все же хочется отачивать мастерство в том языке, который ты используешь ежедневно, поэтому в качестве альтернативы я взял свежий статический генератор написанный на Swift от John Sundell.</p><p>Нам предстоит сделать 3 вещи:</p><ol><li><a href="#create-blog">создать блог на GitРub Pages</a></li><li><a href="#publish">разобраться с тем как работать с Publish</a></li><li><a href="#deploy">залить свой новый блог на GitРub Pages</a> <br/><br/> Итак, перейдем к пункту 1</li></ol><h2><a name="create-blog"></a> 1. Создадим блог на Github Pages.</h2><p>Официальная инструкция доступен по адресу <a href="https://pages.github.com">https://pages.github.com</a></p><p>Основное условие - login блога должен совпадать с вашим логином на GitHub. В моем случае это sparklone</p><ul><li>логинимся в GitHub</li><li>идем по адресу <a href="https://github.com/new">https://github.com/new</a></li><li>в качестве имени репозитория вводите <em>login</em>.github.io, в моем случае было sparklone.github.io</li><li>убеждаемся, что он будет Public</li><li>жмем Create Repository</li><li>все, наш блог уже доступен по адресу https://<em>login</em>.github.io</li></ul><br/><p>Но пока на сайте нет ни одного файл Можно переходить ко второму пункту</p><h2><a name="publish"></a> 2. Разберёмся с тем как работать с Publish</h2><p>Еще раз <a href="https://github.com/JohnSundell/Publish">Publish</a> - это статический генератор сайтов написанный на Swift, что позволяет выстраивать любую логику при генерации сайта, теги, карта сайта, rss, специфическая перелинковка. Все на что нам хватит фантазии. Одна из моих идей на будущее - попробовать писать статьи на двух языках, и чтобы настроенный шаблон умел это понимать и вставлять переключатель в статью к примеру. Не знаю дойдут ли когда нибудь до этого руки, но как идея - интересно.</p><p>Я предпочел установить напрямую через git, создал папку ~/Developer/tools и там выполнил</p><pre><code>git clone https://github.<span class="property">com</span>/<span class="type">JohnSundell</span>/<span class="type">Publish</span>.<span class="property">git</span>
 cd <span class="type">Publish</span>
 make
 </code></pre><p>далее я создал папку где я планирую хранить свой сайт (точнее исходники его генератора), в моем случае это ~/Developer/my/blog</p><p>и внутри этой папки запускаем команду</p><pre><code>publish new
