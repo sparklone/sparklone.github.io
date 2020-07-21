@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"/><meta name="og:site_name" content="Каморка сурового программиста, дубль 2"/><link rel="canonical" href="https://sparklone.github.io/articles/make-auto-updated-swifui-views-preview-list"/><meta name="twitter:url" content="https://sparklone.github.io/articles/make-auto-updated-swifui-views-preview-list"/><meta name="og:url" content="https://sparklone.github.io/articles/make-auto-updated-swifui-views-preview-list"/><title>Личная поваренная книга SwiftUI рецептов | Каморка сурового программиста, дубль 2</title><meta name="twitter:title" content="Личная поваренная книга SwiftUI рецептов | Каморка сурового программиста, дубль 2"/><meta name="og:title" content="Личная поваренная книга SwiftUI рецептов | Каморка сурового программиста, дубль 2"/><meta name="description" content="Создаем авто пополняемый список preview для SwiftUI Views"/><meta name="twitter:description" content="Создаем авто пополняемый список preview для SwiftUI Views"/><meta name="og:description" content="Создаем авто пополняемый список preview для SwiftUI Views"/><meta name="twitter:card" content="summary"/><link rel="stylesheet" href="/styles.css" type="text/css"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="shortcut icon" href="/images/favicon.png" type="image/png"/><link rel="alternate" href="/feed.rss" type="application/rss+xml" title="Subscribe to Каморка сурового программиста, дубль 2"/></head><body class="item-page"><header><div class="wrapper"><a class="site-name" href="/">Каморка сурового программиста, дубль 2</a><nav><ul><li><a class="selected" href="/articles">My posts</a></li><li><a href="/about">About</a></li></ul></nav></div></header><div class="wrapper"><article><div class="content"><h1>Личная поваренная книга SwiftUI рецептов</h1><p>Когда начинаешь разбираться в какой то обширной теме в программировании - количество скачанных проектов, созданных черновиков начинает превышать все мыслимые и немыслимые пределы. А потом всё перемешивается, теряется. Вроде помнил, что ты с этим работал, а где, когда? Я пробовал работать в Playground'ах, но они на мой взгляд не такие стабильные как обычный проект, отваливается подсветка, нет возможности нормально делать Debug. С недавних пор я завел единый проект для исследования SwiftUI, и все небольшие вещи закидываю туда. Это помогает держать все в одном месте, к тому же поиск внутри проекта намного удобней. Хоть SwiftUI и предоставляет Preview для быстрого просмотра View, даже позволяет их отлаживать, все же этого не всегда хватает. Хочется и на устройстве проверить. А если держать все эти View внутри одного проекта - надо при создании новой вьюхи проставлять ее как основную в SceneDelegate, что довольно быстро начинает утомлять. Как было бы круто, если бы мы могли видеть все наши тестовые View при запуске приложения и могли выбрать с чем работать. Фантастика скажете вы? Отнюдь )</p><p>Задачу думаю можно решить более чем одним путем. Навскидку - прикрутить Sourcery, но интересно было решить без вспомогательных инструментов.</p><p>Итак, что из себя представляет View и её Preview:</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> ContentView: <span class="type">View</span> {
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">Text</span>(<span class="string">"Hello, World!"</span>)
+    }
+}
+
+<span class="keyword">struct</span> ContentView_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">ContentView</span>()
+    }
+}
+</code></pre><p>Как мы видим предпросмотр для view обеспечивается структурой, которая имплементирует PreviewProvider, если кто не знал, можно даже внутри одного файла создавать сколь угодно структур/классов, которые будут имплементировать PreviewProvider и в зоне предпросмотра они отобразятся все. Может пригодиться, если хотим разбить наш ContentView_Previews на неколько с разными настройками (хотя можно это же сделать и внутри одной структуры имплементирующей PreviewProvider, но речь не об этом).</p><p>Что из себя представляет PreviewProvider - это протокол</p><pre><code><span class="comment">/// Produces view previews in Xcode.
+///
+/// Xcode statically discovers types that conform to `PreviewProvider` and
+/// generates previews in the canvas for each provider it discovers.</span>
+<span class="keyword">@available</span>(iOS <span class="number">13.0</span>, <span class="type">OSX</span> <span class="number">10.15</span>, tvOS <span class="number">13.0</span>, watchOS <span class="number">6.0</span>, *)
+<span class="keyword">public protocol</span> PreviewProvider : <span class="type">_PreviewProvider</span> {
+
+    <span class="comment">/// The type of the previews variable.</span>
+    <span class="keyword">associatedtype</span> Previews : <span class="type">View</span>
+
+    <span class="comment">/// Generates a collection of previews.
+    ///
+    /// Example:
+    ///
+    ///     struct MyPreviews : PreviewProvider {
+    ///         static var previews: some View {
+    ///             return Group {
+    ///                 GreetingView("Hello"),
+    ///                 GreetingView("Guten Tag"),
+    ///
+    ///                 ForEach(otherGreetings, id: \.self) {
+    ///                     GreetingView($0)
+    ///                 }
+    ///             }
+    ///             .previewDevice("iPhone X")
+    ///         }
+    ///     }</span>
+    <span class="keyword">static var</span> previews: <span class="type">Self</span>.<span class="type">Previews</span> { <span class="keyword">get</span> }
+
+    <span class="comment">/// Returns which platform to run the provider on.
+    ///
+    /// When `nil`, Xcode infers the platform based on the file the
+    /// `PreviewProvider` is defined in. This should only be provided when the
+    /// file is in targets that support multiple platforms.</span>
+    <span class="keyword">static var</span> platform: <span class="type">PreviewPlatform</span>? { <span class="keyword">get</span> }
+}
+</code></pre><p>Главное, что можно извлечь из кода, это не простой протокол, а PAT: Protocol with Associated Type, что сразу усложняет дело. Я перепробовал много вариантов как обеспечить нужную функциональность с минимальными усилиями.</p><p>Начнем с того как вообще можно подобные вещи делать real time? В Objective-C мы могли делать все что угодно с помощью reflection - получать список всех кассов, исследовать их свойства. В swift это все дело сильно ограничили, и Mirror не даст нам всего необходимого. Поэтому пришлось смотреть в сторону objc_getClassList, это метод из Obj-C рантайма, который позволяет получить список всех классов. К сожалению такого нет для Swift структур, поэтому пришлось обходится тем, что дали.</p><p>Разберем решение по частям.</p><p>Не получится нормально работать с системным протоколом PreviewProvider из за того, что он PAT, поэтом создадим Erase версию этого протокола</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">protocol</span> PreviewHolder {
+    <span class="keyword">static var</span> anyPreviews: <span class="type">AnyView</span> { <span class="keyword">get</span> }
+    <span class="keyword">static var</span> name: <span class="type">String</span> { <span class="keyword">get</span> }
+    <span class="keyword">static var</span> starred: <span class="type">Bool</span> { <span class="keyword">get</span> }
+}
+
+<span class="keyword">extension</span> <span class="type">PreviewHolder</span> <span class="keyword">where</span> <span class="type">Self</span>: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> anyPreviews: <span class="type">AnyView</span> {
+        <span class="type">AnyView</span>(previews)
+    }
+
+    <span class="keyword">static var</span> name: <span class="type">String</span> {
+        <span class="type">String</span>(describing: <span class="keyword">self</span>).<span class="call">replacingOccurrences</span>(of: <span class="string">"_Previews"</span>, with: <span class="string">""</span>)
+    }
+
+    <span class="keyword">static var</span> starred: <span class="type">Bool</span> { <span class="keyword">false</span> }
+}
+</code></pre><p>1. Как видно я стер тип у previews, создав обертку anyPreviews, которая будет возвращать AnyView. Я не очень люблю такие штуки, потенциальная потеря производительности, но т.к. это не production код, то на это можно закрыть глаза.</p><p>2. name - свойство возвращающее имя нашей View, как оно будет отображатсья в списке, учитывая что все Preview имеют автоматом генерируемые имена <code></code><code>ViewName_Previews</code><code></code> - можно <code></code><code>_Previews</code><code></code> отрезать.</p><p>3. Я добавил свойство starred, т.к. число View будет все увеличиваться, и начиная работать с новым куском кода хочется увидеть его сверху в списке. Это можно сделать переопределив у превьюхи для новой View это свойство, возвращая true.</p><p>Сам список выглядит довольно просто.</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> PreviewsList: <span class="type">View</span> {
+
+    <span class="keyword">@State private var</span> starred: [<span class="type">PreviewHolder</span>.<span class="type">Type</span>] = []
+
+    <span class="keyword">@State private var</span> general: [<span class="type">PreviewHolder</span>.<span class="type">Type</span>] = []
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">NavigationView</span> {
+            <span class="type">List</span> {
+                <span class="type">Section</span>(header: <span class="type">Text</span>(<span class="string">"Starred"</span>)) {
+                    <span class="type">SubList</span>(elements: starred)
+                }
+                <span class="type">Section</span>(header: <span class="type">Text</span>(<span class="string">"General"</span>)) {
+                    <span class="type">SubList</span>(elements: general)
+                }
+            }.<span class="call">navigationBarTitle</span>(<span class="string">"Catalog"</span>)
+                .<span class="call">onAppear</span> {
+                    <span class="keyword">let</span> sorted = <span class="type">PreviewUtils</span>.<span class="call">parse</span>().<span class="call">sorted</span>(by: { (lhs, rhs) -&gt; <span class="type">Bool</span> <span class="keyword">in</span>
+                        lhs.<span class="property">name</span> &lt; rhs.<span class="property">name</span>
+                    })
+                    <span class="keyword">self</span>.<span class="property">starred</span> = sorted.<span class="call">filter</span> { $0.<span class="property">starred</span> }
+                    <span class="keyword">self</span>.<span class="property">general</span> = sorted.<span class="call">filter</span> { !$0.<span class="property">starred</span> }
+            }
+        }
+    }
+}
+
+<span class="keyword">private struct</span> SubList: <span class="type">View</span> {
+    <span class="keyword">var</span> elements: [<span class="type">PreviewHolder</span>.<span class="type">Type</span>]
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">ForEach</span>(<span class="number">0</span>..&lt;elements.<span class="property">count</span>, id: \.<span class="keyword">self</span>) { id <span class="keyword">in
+            return</span> <span class="type">NavigationLink</span>(destination: <span class="keyword">self</span>.<span class="property">elements</span>[id].anyPreviews) {
+                <span class="type">Text</span>(<span class="keyword">self</span>.<span class="property">elements</span>[id].name)
+            }
+        }
+    }
+}
+
+<span class="keyword">struct</span> PreviewsList_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">PreviewsList</span>()
+    }
+}
+</code></pre><p>Все View сортируются по имени и разбивается на 2 списка, starred и обычные. Выглядеть все будет примерно так:</p><br/><img src="/blog/images/make-auto-updated-swifui-views-preview-list/list.png" width="300"/><p>Ну и в SceneDelegate просто меняем основную вьюху</p><pre><code><span class="keyword">let</span> contentView = <span class="type">PreviewsList</span>()
+</code></pre><p>Остался последний момент, как же сделать так, чтобы наши Preview попали в этот список:</p><ul><li>поменять struct на class</li><li>добавить поддержку PreviewHolder</li></ul><br/><p>т.е. вместо</p><pre><code><span class="keyword">struct</span> ContentView_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">ContentView</span>()
+    }
+}
+</code></pre><p>станет</p><pre><code><span class="keyword">class</span> ContentView_Previews: <span class="type">PreviewProvider</span>, <span class="type">PreviewHolder</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">ContentView</span>()
+    }
+}
+</code></pre><p>Опционально можно переопределять name и starred.</p><p>Это решение написано за пару часов, чтобы по быстрому испытать идею. При желании его можно наворотить по полной, проставляя теги, дату создания для Preview, показывать список не основным, а в в Debug окне, что позволит использовать даже на боевом проекте (не забываем отключать в Release сборке). В общем все зависит от вашей фантазии )</p><p>Скачать проект с базовой реализацией можно здесь: <a href="https://github.com/sparklone/swiftui-views-preview-list" target="_blank">Github</a></p></div><span>Tagged with: </span><ul class="tag-list"><li><a href="/tags/swift">swift</a></li><li><a href="/tags/swiftui">swiftui</a></li><li><a href="/tags/utils">utils</a></li></ul></article></div><footer><p>Мои контакты: <a href="http://twitter.com/sparkLonet">Twitter</a>, <a href="https://github.com/sparklone">GitHub</a>, <a href="https://t.me/SparkLone">Telegram</a></p><p><a href="/feed.rss">RSS feed</a></p><p>Generated using <a href="https://github.com/johnsundell/publish">Publish</a></p></footer></body></html>
