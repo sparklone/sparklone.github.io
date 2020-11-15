@@ -1,4 +1,205 @@
-<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content"><channel><title>Каморка сурового программиста, дубль 2</title><description>Блог о технологиях, преимущественно о Swift и обо всём, что связано с Apple</description><link>https://sparklone.github.io</link><language>ru</language><lastBuildDate>Wed, 22 Jul 2020 01:55:17 +0300</lastBuildDate><pubDate>Wed, 22 Jul 2020 01:55:17 +0300</pubDate><ttl>250</ttl><atom:link href="https://sparklone.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://sparklone.github.io/articles/make-auto-updated-swifui-views-preview-list</guid><title>Личная поваренная книга SwiftUI рецептов</title><description>Создаем авто пополняемый список preview для SwiftUI Views</description><link>https://sparklone.github.io/articles/make-auto-updated-swifui-views-preview-list</link><pubDate>Wed, 22 Jul 2020 02:00:00 +0300</pubDate><content:encoded><![CDATA[<h1>Личная поваренная книга SwiftUI рецептов</h1><p>Когда начинаешь разбираться в какой то обширной теме в программировании - количество скачанных проектов, созданных черновиков начинает превышать все мыслимые и немыслимые пределы. А потом всё перемешивается, теряется. Вроде помнил, что ты с этим работал, а где, когда? Я пробовал работать в Playground'ах, но они на мой взгляд не такие стабильные как обычный проект, отваливается подсветка, нет возможности нормально делать Debug. С недавних пор я завел единый проект для исследования SwiftUI, и все небольшие вещи закидываю туда. Это помогает держать все в одном месте, к тому же поиск внутри проекта намного удобней. Хоть SwiftUI и предоставляет Preview для быстрого просмотра View, даже позволяет их отлаживать, все же этого не всегда хватает. Хочется и на устройстве проверить. А если держать все эти View внутри одного проекта - надо при создании новой вьюхи проставлять ее как основную в SceneDelegate, что довольно быстро начинает утомлять. Как было бы круто, если бы мы могли видеть все наши тестовые View при запуске приложения и могли выбрать с чем работать. Фантастика скажете вы? Отнюдь )</p><p>Задачу думаю можно решить более чем одним путем. Навскидку - прикрутить Sourcery, но интересно было решить без вспомогательных инструментов.</p><p>Итак, что из себя представляет View и её Preview:</p><pre><code><span class="keyword">import</span> SwiftUI
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content"><channel><title>Каморка сурового программиста, дубль 2</title><description>Блог о технологиях, преимущественно о Swift и обо всём, что связано с Apple</description><link>https://sparklone.github.io</link><language>ru</language><lastBuildDate>Mon, 16 Nov 2020 02:43:43 +0300</lastBuildDate><pubDate>Mon, 16 Nov 2020 02:43:43 +0300</pubDate><ttl>250</ttl><atom:link href="https://sparklone.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://sparklone.github.io/articles/property-wrappers-in-swift</guid><title>Property Wrappers в Swift</title><description>Разбираемся что таке Property Wrappers в Swift, как они устроены, какие есть возможности и подводные камни.</description><link>https://sparklone.github.io/articles/property-wrappers-in-swift</link><pubDate>Mon, 16 Nov 2020 02:00:00 +0300</pubDate><content:encoded><![CDATA[<h1>Property Wrappers в Swift</h1><p>В рамках предложения <a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-wrappers.md">SE-0258 Property Wrappers</a> в Swift добавили возможность к свойствам добавлять обертки. В основном это было сделано для SwiftUI. Чтобы было проще работать с данными добавили <strong>@State</strong>, <strong>@Binding</strong>, <strong>@ObservedObject</strong> и т.д.</p><p>Я бы не сказал, что Property Wrappers очень сложны просты для понимания, но стоит в них разобраться получше, т.к. есть и нюансы. Итак, что такое property wrapper? Из самого названия можно догадаться, что это обертка над свойством, которая добавляет логику к этому свойству.</p><p>Перед тем как углубляться в более сложные примеры давайте создадим простейшую обертку-пустышку, которая по сути ничего не делает, просто хранит значение. Исходя из <strong>SE-0258</strong>, чтобы создать свою обертку необходимо</p><ol><li>чтобы перед типом стоял атрибут <strong>@propertyWrapper</strong></li><li>тип обязан содержать переменную <strong>wrappedValue</strong> с уровнем доступа не ниже, чем у самого типа</li></ol><br/><p>Итого простейший пример будет выглядеть так:</p><pre><code><span class="keyword">@propertyWrapper
+struct</span> Simplest&lt;T&gt; {
+    <span class="keyword">var</span> wrappedValue: <span class="type">T</span>
+}
+</code></pre><p>Попробуем применить нашу обертку:</p><pre><code><span class="keyword">struct</span> TestSimplest {
+    <span class="keyword">@Simplest var</span> value: <span class="type">String</span>
+}
+
+<span class="keyword">let</span> simplest = <span class="type">TestSimplest</span>(value: <span class="string">"test"</span>)
+<span class="call">print</span>(simplest.<span class="property">value</span>)
+
+</code></pre><p>В консоли будет выведено: test</p><p>Но если внимательно изучить proposal, то мы обнаружим как внутри объекта раскрываются property wrapper'ы на самом деле</p><pre><code><span class="keyword">struct</span> TestSimplest {
+    <span class="keyword">@Simplest var</span> value: <span class="type">String</span>
+
+    <span class="comment">// будет развернуто в</span> 
+    <span class="keyword">private var</span> _value: <span class="type">Simplest</span>
+    <span class="keyword">var</span> value: <span class="type">String</span> { <span class="comment">/* доступ через _value.wrappedValue */</span> }
+}
+</code></pre><p>За счет приватности снаружи мы не можем получить доступ к wrapper'у <strong>print(simplest._value)</strong> выдаст ошибку</p><p>Но изнутри типа мы вполне можем получить доступ к самому wrapper'у напрямую</p><pre><code><span class="keyword">extension</span> <span class="type">TestSimplest</span> {
+    <span class="keyword">func</span> describe() {
+        <span class="call">print</span>(<span class="string">"value:</span> \(value) <span class="string">type:</span> \(<span class="call">type</span>(of: value))<span class="string">"</span>)
+        <span class="call">print</span>(<span class="string">"_value:</span> \(_value) <span class="string">type:</span> \(<span class="call">type</span>(of: _value))<span class="string">"</span>)
+        <span class="call">print</span>(<span class="string">"_value.wrappedValue:</span> \(value) <span class="string">type:</span> \(<span class="call">type</span>(of: _value.<span class="property">wrappedValue</span>))<span class="string">"</span>)
+    }
+}
+
+<span class="keyword">let</span> simplest = <span class="type">TestSimplest</span>(value: <span class="string">"test"</span>)
+simplest.<span class="call">describe</span>()
+</code></pre><p>Это выведет</p><pre><code>value: test type: <span class="type">String</span>
+_value: <span class="type">Simplest</span>&lt;<span class="type">String</span>&gt;(wrappedValue: <span class="string">"test"</span>) type: <span class="type">Simplest</span>&lt;<span class="type">String</span>&gt;
+_value.<span class="property">wrappedValue</span>: test type: <span class="type">String</span>
+</code></pre><p>что подтверждает, что _value - реальная обертка, а value == _value.wrappedValue == String</p><p>Разобравшись с простейшим примером попробуем создать что то чуть более полезное, к примеру обертку для целых чисел со следующей логикой - если присваивается отрицательное число - делаем его положительным, по сути обертка над функцией <strong>abs</strong></p><pre><code><span class="keyword">@propertyWrapper
+struct</span> Abs {
+    <span class="keyword">private var</span> value: <span class="type">Int</span> = <span class="number">0</span>
+
+    <span class="keyword">var</span> wrappedValue: <span class="type">Int</span> {
+        <span class="keyword">get</span> { value }
+        <span class="keyword">set</span> {
+            value = <span class="call">abs</span>(newValue)
+        }
+    }
+
+    <span class="keyword">init</span>(wrappedValue: <span class="type">Int</span>) {
+        <span class="keyword">self</span>.<span class="property">wrappedValue</span> = wrappedValue
+    }
+}
+
+<span class="keyword">struct</span> TestAbs {
+    <span class="keyword">@Abs var</span> value: <span class="type">Int</span> = <span class="number">0</span>
+}
+
+<span class="keyword">var</span> testAbs = <span class="type">TestAbs</span>(value: -<span class="number">10</span>)
+<span class="call">print</span>(testAbs.<span class="property">value</span>)
+testAbs.<span class="property">value</span> = <span class="number">20</span>
+<span class="call">print</span>(testAbs.<span class="property">value</span>)
+testAbs.<span class="property">value</span> = -<span class="number">30</span>
+<span class="call">print</span>(testAbs.<span class="property">value</span>)
+</code></pre><p>В консоли будет</p><pre><code><span class="number">10
+20
+30</span>
+</code></pre><p>Логику мы поместили в set для <strong>wrappedValue</strong>, в совокупности с инициализатором в котором мы присваиваем изначальное значение в свойство <strong>wrappedValue</strong> это позволяет нам получить нужное поведение как при инициализации переменной с оберткой, так и при дальнейшем ее изменении, в результате отрицательного числа не может быть в value в принципе. Обращаю внимание, что важно, чтобы в инициализаторе первым параметром шел параметр с именем wrappedValue, это позволяет swift'у под капотом позволять вот такие вот присваивания, когда мы в переменную помеченную оберткой можем присвоить значение того типа, который она содержит</p><pre><code><span class="keyword">@Abs var</span> value: <span class="type">Int</span> = <span class="number">0</span>
+</code></pre><p>если мы поменяем к примеру на</p><pre><code><span class="keyword">init</span>(custom: <span class="type">Int</span>) {
+    <span class="keyword">self</span>.<span class="property">wrappedValue</span> = custom
+}
+</code></pre><p>это уже не будет работать</p><p>Стоит отметить, что т.к. по факту реализуют <strong>@propertyWrapper</strong> самые обычные типы, мы можем параметризовать обертки.</p><p>К примеру создадим обертку Uppercased, которая принимает на вход так же число символов, которое необходимо конвертировать в upper case с начала строки.</p><pre><code><span class="keyword">@propertyWrapper
+struct</span> Uppercased {
+    <span class="keyword">private var</span> count: <span class="type">Int</span>
+    <span class="keyword">private var</span> value: <span class="type">String</span> = <span class="string">""</span>
+
+    <span class="keyword">var</span> wrappedValue: <span class="type">String</span> {
+        <span class="keyword">get</span> { value }
+        <span class="keyword">set</span> {
+            <span class="keyword">let</span> uppercased = <span class="type">String</span>(newValue.<span class="call">prefix</span>(count)).<span class="call">uppercased</span>()
+            value = uppercased
+            <span class="keyword">guard let</span> from = newValue.<span class="call">index</span>(newValue.<span class="property">startIndex</span>, offsetBy: count, limitedBy: newValue.<span class="property">endIndex</span>) <span class="keyword">else</span> { <span class="keyword">return</span> }
+            value += newValue.<span class="call">suffix</span>(from: from)
+        }
+    }
+
+    <span class="keyword">init</span>(wrappedValue: <span class="type">String</span>, count: <span class="type">Int</span>) {
+        <span class="keyword">self</span>.<span class="property">count</span> = count
+        <span class="keyword">self</span>.<span class="property">wrappedValue</span> = wrappedValue
+    }
+
+}
+
+<span class="keyword">struct</span> TestUppercased {
+    <span class="keyword">@Uppercased</span>(count: <span class="number">5</span>) <span class="keyword">var</span> value: <span class="type">String</span> = <span class="string">""</span>
+}
+
+<span class="keyword">var</span> testAbs = <span class="type">TestUppercased</span>(value: <span class="string">"hello world"</span>)
+<span class="call">print</span>(testAbs.<span class="property">value</span>)
+testAbs.<span class="property">value</span> = <span class="string">"another example"</span>
+<span class="call">print</span>(testAbs.<span class="property">value</span>)
+testAbs.<span class="property">value</span> = <span class="string">"abc"</span>
+<span class="call">print</span>(testAbs.<span class="property">value</span>)
+</code></pre><p>В консоли будет</p><pre><code><span class="type">HELLO</span> world
+<span class="type">ANOTHer</span> example
+<span class="type">ABC</span>
+</code></pre><p>Так же хотел бы обратить внимание на "магию", этот пример не будет компилироваться, если в <strong>TestUppercased</strong> мы уберем присваивание строки, т.е. под капотом</p><pre><code><span class="keyword">@Uppercased</span>(count: <span class="number">5</span>) <span class="keyword">var</span> value: <span class="type">String</span> = <span class="string">""</span> 
+</code></pre><p>вызывает <code></code><code>init(wrappedValue: String, count: Int)</code><code></code>, в качестве <strong>wrappedValue</strong> как раз передается значение которое мы присваиваем в value</p><p>Чтобы обойти это ограничение придется инициализацию проводить в конструкторе,</p><pre><code><span class="keyword">struct</span> TestUppercased2 {
+    <span class="keyword">@Uppercased var</span> value: <span class="type">String</span>
+
+    <span class="keyword">init</span>(count: <span class="type">Int</span>, example: <span class="type">String</span>) {
+        _value = <span class="type">Uppercased</span>(wrappedValue: example, count: count)
+    }
+}
+
+<span class="keyword">var</span> testAbs2 = <span class="type">TestUppercased2</span>(count: <span class="number">3</span>, example: <span class="string">"super puper"</span>)
+<span class="call">print</span>(testAbs2.<span class="property">value</span>)
+</code></pre><p>Если вы успели поработать со <strong>SwiftUI</strong> то думаю обратили внимание на переменные предваренные знаком доллара <strong>$value</strong>, их мы обычно передаем в дочернюю <strong>View</strong>, у которой переменная определена как <strong>@Binding</strong>. Proposal поясняет, для чего это нужно. Вспомним, что происходит если объявить переменную как <strong>PropertyWrapper</strong>, - снаружи типа невозможно будет получить к ней доступ</p><pre><code><span class="keyword">struct</span> TestSimplest {
+    <span class="keyword">@Simplest var</span> value: <span class="type">String</span>
+
+    <span class="comment">// будет развернуто в</span> 
+    <span class="keyword">private var</span> _value: <span class="type">Simplest</span>
+    <span class="keyword">var</span> value: <span class="type">String</span> { <span class="comment">/* доступ через _value.wrappedValue */</span> }
+}
+</code></pre><p>А что если мы хотим, чтобы пользователи структуры <strong>TestSimplest</strong> имели доступ к логике обертки? Для этого надо определить свойство <strong>projectedValue</strong>.</p><pre><code><span class="keyword">@propertyWrapper
+struct</span> VarWithMemory&lt;T&gt; {
+    <span class="keyword">private var</span> _current: <span class="type">T</span>
+    <span class="keyword">private (set) var</span> previousValues: [<span class="type">T</span>] = []
+
+    <span class="keyword">var</span> wrappedValue: <span class="type">T</span> {
+        <span class="keyword">get</span> { _current }
+        <span class="keyword">set</span> {
+            previousValues.<span class="call">append</span>(_current)
+            _current = newValue
+        }
+    }
+
+    <span class="keyword">var</span> projectedValue: <span class="type">VarWithMemory</span>&lt;<span class="type">T</span>&gt; {
+        <span class="keyword">get</span> { <span class="keyword">self</span> }
+        <span class="keyword">set</span> { <span class="keyword">self</span> = newValue }
+    }
+
+    <span class="keyword">init</span>(wrappedValue: <span class="type">T</span>) {
+        <span class="keyword">self</span>.<span class="property">_current</span> = wrappedValue
+    }
+
+    <span class="keyword">mutating func</span> clear() {
+        previousValues.<span class="call">removeAll</span>()
+    }
+
+}
+
+<span class="keyword">struct</span> TestVarWithMemory {
+    <span class="keyword">@VarWithMemory var</span> value: <span class="type">String</span> = <span class="string">""</span>
+}
+
+<span class="keyword">var</span> test = <span class="type">TestVarWithMemory</span>(value: <span class="string">"initial"</span>)
+<span class="call">print</span>(<span class="string">"1. current value:</span> \(test.<span class="property">value</span>)<span class="string">"</span>)
+test.<span class="property">value</span> = <span class="string">"second"</span>
+<span class="call">print</span>(<span class="string">"2. current value:</span> \(test.<span class="property">value</span>)<span class="string">"</span>)
+test.<span class="property">value</span> = <span class="string">"third"</span>
+<span class="call">print</span>(<span class="string">"3. current value:</span> \(test.<span class="property">value</span>)<span class="string">"</span>)
+
+<span class="comment">// value: String, won't work
+// print(test.value.previousValues)</span>
+
+<span class="call">print</span>(<span class="string">"4. history:</span> \(test.$value.<span class="property">previousValues</span>)<span class="string">"</span>)
+<span class="call">print</span>(<span class="string">"5. clear"</span>)
+test.$value.<span class="call">clear</span>()
+<span class="call">print</span>(<span class="string">"6. current value:</span> \(test.<span class="property">value</span>)<span class="string">"</span>)
+<span class="call">print</span>(<span class="string">"7. history:</span> \(test.$value.<span class="property">previousValues</span>)<span class="string">"</span>)
+</code></pre><p>Вывод в лог:</p><pre><code><span class="number">1</span>. <span class="property">current</span> value: initial
+<span class="number">2</span>. <span class="property">current</span> value: second
+<span class="number">3</span>. <span class="property">current</span> value: third
+<span class="number">4</span>. <span class="property">history</span>: [<span class="string">"initial"</span>, <span class="string">"second"</span>]
+<span class="number">5</span>. <span class="property">clear</span>
+<span class="number">6</span>. <span class="property">current</span> value: third
+<span class="number">7</span>. <span class="property">history</span>: []
+</code></pre><p>Таким образом:</p><pre><code><span class="keyword">@VarWithMemory var</span> value: <span class="type">String</span> = <span class="string">""</span>
+</code></pre><p>развернется во что то вроде</p><pre><code><span class="keyword">private var</span> _value: <span class="type">VarWithMemory</span>&lt;<span class="type">String</span>&gt; = <span class="type">VarWithMemory</span>(wrappedValue: <span class="string">""</span>)
+
+<span class="keyword">public var</span> value: <span class="type">String</span> {
+  <span class="keyword">get</span> { _value.<span class="property">wrappedValue</span> }
+  <span class="keyword">set</span> { _value.<span class="property">wrappedValue</span> = newValue }
+}
+
+<span class="keyword">public var</span> $value: <span class="type">VarWithMemory</span>&lt;<span class="type">String</span>&gt; {
+  <span class="keyword">get</span> { _value.<span class="property">projectedValue</span> }
+  <span class="keyword">set</span> { _value.<span class="property">projectedValue</span> = newValue }
+}
+</code></pre><p>Важно отметит, что тип <strong>projectedValue</strong> может быть любой и не соответствовать типу в котором определена переменная. Это и позволило для <strong>@State</strong> при получении <strong>projectedValue</strong> через <strong>$</strong> - получать на выходе не <strong>State</strong>, а <strong>Binding</strong></p><p>Какие основные очевидные вариант применения можно придумать?</p><ul><li>когда работа со значением на самом деле проксируется и фактически переменная хранится в базе данных/<a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-wrappers.md#user-defaults">User Defaults</a></li><li>когда мы хотим как то преобразовать значение при присваивании, примером этого может быть приведенные выше <strong>Abs</strong>, <strong>Uppercased</strong>, ну или из proposal'а <a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-wrappers.md#clamping-a-value-within-bounds">Clamping</a> для обрезания значение по min/max границам</li><li>реализация <a href="https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-wrappers.md#copy-on-write">Copy on Write</a></li></ul><p>ну и т.д.</p><p>Надо отметить, что есть определенные ограничения применения property wrapper'ов</p><ul><li>в протоколе нельзя указать, что это свойство должно быть обьявлено с таким то <strong>Property wrapper</strong>'ом</li><li>свойство с property wrapper'ом нельзя использовать в <strong>extension</strong> и <strong>enum</strong></li><li>свойство с property wrapper'ом нельзя переопределить в наследнике класса</li><li>свойство с property wrapper'ом не может быть <strong>lazy</strong>, <strong>@NSCopying</strong>, <strong>@NSManaged</strong>, <strong>weak</strong>, или <strong>unowned</strong>.</li><li>свойство с property wrapper'ом не может иметь кастомный <strong>get/set</strong></li><li>уровень доступа <strong>wrappedValue</strong>, и уровни доступа для всего нижеперечисленного (если присутствуют) должны быть идентичны уровню доступа типа в котором они определены: <strong>projectedValue</strong>, <strong>init(wrappedValue:)</strong>, <strong>init()</strong></li></ul><br/><p>Кстати, хотя обертки можно комбинировать, - есть один нюанс. Комбинирование происходит по принципу матрешки, и к примеру такой код:</p><pre><code><span class="keyword">struct</span> TestCombined {
+    <span class="keyword">@VarWithMemory @Abs var</span> value: <span class="type">Int</span> = <span class="number">0</span>
+}
+
+<span class="keyword">var</span> test = <span class="type">TestCombined</span>()
+<span class="call">print</span>(test.<span class="property">value</span>)
+test.<span class="property">value</span> = -<span class="number">1</span>
+test.<span class="property">value</span> = -<span class="number">2</span>
+test.<span class="property">value</span> = -<span class="number">3</span>
+<span class="call">print</span>(test.<span class="property">value</span>)
+<span class="call">print</span>(test.$value.<span class="property">previousValues</span>)
+</code></pre><p>выдаст в лог</p><pre><code><span class="number">0
+3</span>
+[__lldb_expr_173.<span class="type">Abs</span>(_value: <span class="number">0</span>), __lldb_expr_173.<span class="type">Abs</span>(_value: <span class="number">1</span>), __lldb_expr_173.<span class="type">Abs</span>(_value: <span class="number">2</span>)]
+</code></pre><p>а не ожидаемые</p><pre><code><span class="number">0
+3</span>
+[<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>]
+
+</code></pre><p>На вход в <strong>VarWithMemory</strong> приходит переменна не типа <strong>Int</strong>, а типа <strong>Abs&lt;Int&gt;</strong> А если бы обертки были не <strong>Generic</strong>, а принимали к примеру только строки, то это даже бы не скомпилировалось. Красивого решения нет, можно к примеру делать специализированные версии оберток, чтобы один тип принимал в конструкторе второй, а внутри уже работать со внутренним типом второго.</p><h2>Подводя итоги.</h2><p>Какие достоинства у property wrapper'ов? Они позволяют спрятать кастомную логику за простым определением переменной добавив <strong>@&lt;Тип&gt;</strong></p><p>Какие минусы?</p><p>С точки зрения практического применения они исходят из их главного плюса, сложность обертки скрыта от глаз, даже сам факт, что ты работаешь с оберткой не очевиден, пока не посмотришь определение переменной. Поэтому я порекомендовал бы аккуратно использовать их в своем проекте.</p><p>Какие альтернативы?</p><ul><li>для создании логики типа <strong>Observer</strong> - использовать <strong>willSet/didSet</strong> у свойств</li><li>для добавления логики модификации/места хранения - использовать <strong>get/set</strong> у свойств</li></ul><br/><p><strong>Playground</strong> с исходниками из статьи доступен <a href="https://github.com/sparklone/property-wrappers-in-swift">здесь</a></p>]]></content:encoded></item><item><guid isPermaLink="true">https://sparklone.github.io/articles/make-auto-updated-swifui-views-preview-list</guid><title>Личная поваренная книга SwiftUI рецептов.</title><description>Создаем авто пополняемый список preview для SwiftUI Views</description><link>https://sparklone.github.io/articles/make-auto-updated-swifui-views-preview-list</link><pubDate>Wed, 22 Jul 2020 02:00:00 +0300</pubDate><content:encoded><![CDATA[<h1>Личная поваренная книга SwiftUI рецептов.</h1><p>Когда начинаешь разбираться в какой то обширной теме в программировании - количество скачанных проектов, созданных черновиков начинает превышать все мыслимые и немыслимые пределы. А потом всё перемешивается, теряется. Вроде помнил, что ты с этим работал, а где, когда? Я пробовал работать в Playground'ах, но они на мой взгляд не такие стабильные как обычный проект, отваливается подсветка, нет возможности нормально делать Debug. С недавних пор я завел единый проект для исследования SwiftUI, и все небольшие вещи закидываю туда. Это помогает держать все в одном месте, к тому же поиск внутри проекта намного удобней. Хоть SwiftUI и предоставляет Preview для быстрого просмотра View, даже позволяет их отлаживать, все же этого не всегда хватает. Хочется и на устройстве проверить. А если держать все эти View внутри одного проекта - надо при создании новой вьюхи проставлять ее как основную в SceneDelegate, что довольно быстро начинает утомлять. Как было бы круто, если бы мы могли видеть все наши тестовые View при запуске приложения и могли выбрать с чем работать. Фантастика скажете вы? Отнюдь )</p><p>Задачу думаю можно решить более чем одним путем. Навскидку - прикрутить Sourcery, но интересно было решить без вспомогательных инструментов.</p><p>Итак, что из себя представляет View и её Preview:</p><pre><code><span class="keyword">import</span> SwiftUI
 
 <span class="keyword">struct</span> ContentView: <span class="type">View</span> {
     <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
