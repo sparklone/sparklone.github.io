@@ -1,0 +1,328 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"/><meta name="og:site_name" content="Каморка сурового программиста, дубль 2"/><link rel="canonical" href="https://sparklone.github.io/articles/working-with-data-in-swiftui"/><meta name="twitter:url" content="https://sparklone.github.io/articles/working-with-data-in-swiftui"/><meta name="og:url" content="https://sparklone.github.io/articles/working-with-data-in-swiftui"/><title>Как работать с данными в SwiftUI | Каморка сурового программиста, дубль 2</title><meta name="twitter:title" content="Как работать с данными в SwiftUI | Каморка сурового программиста, дубль 2"/><meta name="og:title" content="Как работать с данными в SwiftUI | Каморка сурового программиста, дубль 2"/><meta name="description" content="Как работать с данными в SwiftUI: @State, @Binding, @StateObject, @ObservedObject, @EnvironmentObject. Разбираемся какие и когда стоит использовать."/><meta name="twitter:description" content="Как работать с данными в SwiftUI: @State, @Binding, @StateObject, @ObservedObject, @EnvironmentObject. Разбираемся какие и когда стоит использовать."/><meta name="og:description" content="Как работать с данными в SwiftUI: @State, @Binding, @StateObject, @ObservedObject, @EnvironmentObject. Разбираемся какие и когда стоит использовать."/><meta name="twitter:card" content="summary"/><link rel="stylesheet" href="/styles.css" type="text/css"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="shortcut icon" href="/images/favicon.png" type="image/png"/><link rel="alternate" href="/feed.rss" type="application/rss+xml" title="Subscribe to Каморка сурового программиста, дубль 2"/></head><body class="item-page"><header><div class="wrapper"><a class="site-name" href="/">Каморка сурового программиста, дубль 2</a><nav><ul><li><a class="selected" href="/articles">My posts</a></li><li><a href="/about">About</a></li></ul></nav></div></header><div class="wrapper"><article><div class="content"><h1>Как работать с данными в SwiftUI</h1><p>SwiftUI богат обертками для работы с данными. Подробней ознакомиться с тем, что такое Property Wrapper'ы (обертки) и с чем их едят можно в моей предыдущей статье <a href="https://sparklone.github.io/articles/property-wrappers-in-swift/">Property Wrappers в Swift</a></p><p>Так что в этой статье мы рассмотрим практическое применение существующих оберток для работы с данными в SwiftUI.</p><p>Основной момент: если меняется значение внутри переменной любой из указанных оберток, и эта переменная используется внутри переменной body, - переменная body будет вычислена повторно, таким образом View обновится (перерисуется).</p><p>Итак, первой оберткой является State.</p><h2>@State</h2><p>Исходя из документации Apple <a href="https://developer.apple.com/documentation/swiftui/state">State</a> необходимо использовать для хранения данных конкретной View. <a href="https://developer.apple.com/documentation/swiftui/state-and-data-flow">Здесь</a> Apple советует в @State хранить именно UI состояние, а не бизнес логику. <em>"Manage transient UI state locally within a view by wrapping value types as State properties."</em></p><p>Более того очень важно работать с этой переменной только внутри View, где она была объявлена, причем только из переменной body, или из методов которые вызываются из переменной body. Поэтому всегда стоит @State объявлять приватной переменной.</p><p><em>"You should only access a state property from inside the view’s body, or from methods called by it. For this reason, declare your state properties as private, to prevent clients of your view from accessing them. It is safe to mutate state properties from any thread."</em></p><p>Приведу простой пример использования @State, он искусственный (как раз View-счетчик обычно полезно инициализировать значениями извне), но с ним проще играться.</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> SimplestState: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> counter = <span class="number">0</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(alignment: .<span class="dotAccess">center</span>, spacing: <span class="number">20</span>) {
+            <span class="type">Text</span>(<span class="string">"counter:</span> \(counter)<span class="string">"</span>)
+                .<span class="call">font</span>(.<span class="dotAccess">title</span>)
+            <span class="type">HStack</span>(spacing: <span class="number">20</span>) {
+                <span class="type">Button</span>(<span class="string">"Increase"</span>) {
+                    counter += <span class="number">1</span>
+                }
+
+                <span class="type">Button</span>(<span class="string">"Decrease"</span>) {
+                    counter = <span class="call">max</span>(<span class="number">0</span>, counter - <span class="number">1</span>)
+                }
+                .<span class="call">disabled</span>(counter == <span class="number">0</span>)
+            }
+        }
+    }
+}
+
+<span class="keyword">struct</span> SimplestState_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">SimplestState</span>()
+    }
+}
+
+</code></pre><p>Хотел бы обратить внимание еще на одну вещь. Хранить в @State стоит только простые типы (Int, String, Bool) ну или в крайнем случае - структуры, но ни в коем случае не классы. Почему? Ну просто потому что с классами State не будет работать.</p><p>Об этом косвенно упоминается в документации фразой <em>"When the state value changes, the view invalidates its appearance and recomputes the body."</em> Подозреваю, что если бы был протокол, который ограничивает что его может реализовать только структура, но не класс - данная обертка бы его использовала (по аналогии с AnyObject для классов).</p><p>Если мы используем @State для структуры, то любое изменение любого ее поля по факту "под капотом" приведет к созданию новой копии структуры, которая перепишет значение в State переменной, что вызовет перерисовку View.</p><p>В случае же класса этого не произойдет. Но не стоит мне верить на слово, show me the code!</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> Datas {
+<span class="comment">//class Datas {</span>
+
+    <span class="keyword">var</span> int: <span class="type">Int</span>
+    <span class="keyword">var</span> string: <span class="type">String</span>
+
+    <span class="keyword">internal init</span>(int: <span class="type">Int</span>, string: <span class="type">String</span>) {
+        <span class="keyword">self</span>.<span class="property">int</span> = int
+        <span class="keyword">self</span>.<span class="property">string</span> = string
+    }
+
+}
+
+<span class="keyword">struct</span> StateExample: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> datas = <span class="type">Datas</span>(int: <span class="number">1</span>, string: <span class="string">"String"</span>)
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(alignment: .<span class="dotAccess">center</span>, spacing: <span class="number">14</span>) {
+            <span class="type">Text</span>(<span class="string">"datas int:</span> \(datas.<span class="property">int</span>)<span class="string">"</span>)
+            <span class="type">Button</span>(<span class="string">"Change int"</span>) {
+                datas.<span class="property">int</span> += <span class="number">1</span>
+            }
+
+            <span class="type">Text</span>(<span class="string">"datas string:</span> \(datas.<span class="property">string</span>)<span class="string">"</span>)
+            <span class="type">Button</span>(<span class="string">"Change string"</span>) {
+                datas.<span class="property">string</span> += <span class="string">"."</span>
+            }
+        }
+    }
+}
+
+<span class="keyword">struct</span> StateExample_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">StateExample</span>()
+    }
+}
+</code></pre><p>Нажатие на кнопки приводит к ожидаемым изменениям только если Datas - struct, если же Datas сделать class - изменение полей класса не приводит к изменению всей переменной datas, и код стоящий за propertyWrapper @State не подхватит изменение объекта и не выполнит повторное вычисление переменной body.</p><h4>Таким образом используем @State:</h4><br/><ul><li>для того чтобы хранить внутреннее состояние View, которое не надо сохранять между сессиями работы приложения.</li></ul><p>К примеру у View которая является кастомной кнопкой можно добавить флаг нажата кнопка или нет. Подразумевая, что если мы создаем кнопку - она всегда в значении по умолчанию. Или для id активного элемент списка. Обычно при заходе на экран со списком ни один элемент не выделен и это не задается снаружи.</p><ul><li>так же очень часто @State используют как черновик, во время прототипирования экрана, чтобы впоследствии перенести переменную в тот же ObservedObject.</li></ul><h2>@Binding</h2><p>Со @State вроде все понятно, но как передавать значение переменных объявленных как State внутренним компонентам, чтобы дети могли их изменять и чтобы изменения отражались и в родительской View? (мы же за модульную структуру).</p><p>Для этого и была создана обертка <a href="https://developer.apple.com/documentation/swiftui/binding">@Binding</a>, чтобы установить двустороннюю связь в плане данных состояния View между родительской View и ее ребенком.</p><p>Заглянем в документацию, или чтобы ускорить процесс, можно воспользоваться инструментом Jump to Definition в Xcode. Если навести курсор мыши над словом @State в Xcode, нажать на клавиатуре ⌃ + ⌘ и нажать левую кнопку (по факту выполнить Jump to Definition), то мы увидим документацию по State прям внутри Xcode. Вообще рекомендую почаще заглядывать в документацию.</p><p>Благодаря этой документации можно убедиться, что projectedValue имеет тип <code>Binding&lt;Value&gt;</code> (доп информацию по projectedValue можно получить из прошлой <a href="https://sparklone.github.io/articles/property-wrappers-in-swift/">статьи</a> )</p><p>В приведенном ниже примере read/write доступ имеют как parent view (BindingExample), она отображает имя и может его обнулить с помощью кнопки Reset, так и child view ChildTextControl, которая в свою очередь делегирует изменение имени в системный контрол TextField</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> BindingExample: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> name = <span class="string">""</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(alignment: .<span class="dotAccess">center</span>, spacing: <span class="number">14</span>) {
+            <span class="type">Text</span>(<span class="string">"Current name:</span> \(name)<span class="string">"</span>)
+            
+            <span class="type">Button</span>(<span class="string">"Reset"</span>) {
+                name = <span class="string">""</span>
+            }.<span class="call">disabled</span>(name.<span class="property">count</span> == <span class="number">0</span>)
+
+            <span class="type">ChildTextControl</span>(text: $name)
+
+            <span class="type">Spacer</span>()
+        }.<span class="call">padding</span>([.<span class="dotAccess">top</span>, .<span class="dotAccess">bottom</span>])
+    }
+}
+
+<span class="keyword">struct</span> ChildTextControl: <span class="type">View</span> {
+
+    <span class="keyword">@Binding var</span> text: <span class="type">String</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">TextField</span>(<span class="string">"Enter name"</span>, text: $text)
+            .<span class="call">padding</span>()
+    }
+}
+
+<span class="keyword">struct</span> BindingExample_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">BindingExample</span>()
+    }
+}
+</code></pre><p>В примере можно увидеть что ChildTextController ожидает в конструкторе <code></code><code>@Binding var text: String</code><code></code> а мы передаем <code></code><code>$name</code><code></code>.</p><p>В документации можно узнать, что подставляя символ $ перед State переменной мы по факту получаем projectedValue у State, а для State projectedValue имеет тип <code></code><code>Binding&lt;Value&gt;</code><code></code>, т.е. $name и есть Binding</p><p>И вновь таки применив Jump to Definition уже на @Binding мы можем увидеть, что конструктор структуры Binding в качестве параметров принимает замыкания get/set</p><pre><code><span class="keyword">public init</span>(get: <span class="keyword">@escaping</span> () -&gt; <span class="type">Value</span>, set: <span class="keyword">@escaping</span> (<span class="type">Value</span>) -&gt; <span class="type">Void</span>)
+</code></pre><p>Таким образом Binding - это средство, которое позволяет работать с value типами как с reference. Ведь если мы передадим Int из одной View в другую - произойдет ее копирование и изменения в parent не будут отражаться в child, впрочем как и наоборот. А Binding - это фасад, который скрывает что под капотом он несет не сами данные а функции позволяющие читать/писать в оригинальное хранилище данных где лежит тот же наш Int.</p><p>Так же из документации можно подсмотреть, что Binding можно инициализировать константой, и полезно это при использовании Preview</p><pre><code><span class="keyword">public static func</span> constant(<span class="keyword">_</span> value: <span class="type">Value</span>) -&gt; <span class="type">Binding</span>&lt;<span class="type">Value</span>&gt;
+</code></pre><p>К примеру Preview к нашему компоненту ChildTextControl мог бы выглядеть так:</p><pre><code><span class="keyword">struct</span> ChildTextControl_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">ChildTextControl</span>(text: .<span class="call">constant</span>(<span class="string">"test"</span>))
+    }
+}
+</code></pre><p>Ну и если @State переменная хранит какую то структуру со своими полями (как вышеприведенная struct Datas), то можно передавать не всю ее ребенку а только нужное поле с помощью того же $ с указанием нужного поля</p><pre><code><span class="type">ChildTextControl</span>(text: $datas.<span class="property">string</span>)
+
+</code></pre><h4>Таким образом область применения @Binding:</h4><br/><ul><li>передать доступ переменных обозначенных как @State / @Published внутрь дочерних компонентов</li></ul><h2>Протокол ObservableObject</h2><p>Обертки @StateObject, @EnvironmentObject, @ObservedObject будут работать с классами реализующими протокол ObservableObject, вот его определение</p><pre><code><span class="keyword">@available</span>(iOS <span class="number">13.0</span>, macOS <span class="number">10.15</span>, tvOS <span class="number">13.0</span>, watchOS <span class="number">6.0</span>, *)
+<span class="keyword">public protocol</span> ObservableObject : <span class="type">AnyObject</span> {
+
+    <span class="comment">/// The type of publisher that emits before the object has changed.</span>
+    <span class="keyword">associatedtype</span> ObjectWillChangePublisher : <span class="type">Publisher</span> = <span class="type">ObservableObjectPublisher</span> <span class="keyword">where</span> <span class="type">Self</span>.<span class="type">ObjectWillChangePublisher</span>.<span class="type">Failure</span> == <span class="type">Never</span>
+
+    <span class="comment">/// A publisher that emits before the object has changed.</span>
+    <span class="keyword">var</span> objectWillChange: <span class="type">Self</span>.<span class="type">ObjectWillChangePublisher</span> { <span class="keyword">get</span> }
+}
+</code></pre><p>Из определения протокола видно, что реализовать его могут только классы, по сути классы реализующие этот протокол будут являться полноценными контейнерами для данных, хранить данные бизнес логики, а не внутреннее состояние View (как @State).</p><p>И работать можно будет с каждым свойством отдельно за счет того, что у каждого свойства мы будем проставлять @Published, что под капотом использует фреймворк Combine. Как указано в документации, для ObservableObject определено свойство objectWillChange, которое будет генерировать событие <strong>перед</strong> каждым изменение свойств помеченных как @Published.</p><p>И если бы мы использовали ObservableObject напрямую, то код мог бы выглядеть как то так:</p><pre><code><span class="keyword">import</span> UIKit
+<span class="keyword">import</span> Combine
+
+<span class="keyword">var</span> cancellables = <span class="type">Set</span>&lt;<span class="type">AnyCancellable</span>&gt;()
+
+<span class="keyword">class</span> Product: <span class="type">ObservableObject</span> {
+    <span class="keyword">@Published var</span> title: <span class="type">String</span>
+    <span class="keyword">@Published var</span> price: <span class="type">Double</span>
+
+    <span class="keyword">init</span>(title: <span class="type">String</span>, price: <span class="type">Double</span>) {
+        <span class="keyword">self</span>.<span class="property">title</span> = title
+        <span class="keyword">self</span>.<span class="property">price</span> = price
+    }
+
+    <span class="keyword">func</span> increasePrice(by value: <span class="type">Double</span>) -&gt; <span class="type">Double</span> {
+        price += value
+        <span class="keyword">return</span> price
+    }
+
+}
+
+<span class="keyword">let</span> product = <span class="type">Product</span>(title: <span class="string">"Phone"</span>, price: <span class="number">100.00</span>)
+product.<span class="property">objectWillChange</span>
+    .<span class="call">sink</span> { <span class="keyword">_ in</span>
+        <span class="call">print</span>(<span class="string">"price '</span>\(product.<span class="property">price</span>)<span class="string">' will change"</span>)
+    }
+    .<span class="call">store</span>(in: &amp;cancellables)
+
+<span class="call">print</span>(product.<span class="call">increasePrice</span>(by: <span class="number">50</span>))
+</code></pre><p>Это выведет в консоль 100, а не 150, на то и willChange а не didChange</p><pre><code>price '<span class="number">100.0</span>' will change
+<span class="number">150.0</span>
+</code></pre><p>Мы так же можем с помощью Combine подписаться и на изменение конкретного поля</p><pre><code>product.$price.<span class="call">sink</span> { value <span class="keyword">in</span>
+    <span class="call">print</span>(<span class="string">"direct $price access: price '</span>\(product.<span class="property">price</span>)<span class="string">' will change"</span>)
+}.<span class="call">store</span>(in: &amp;cancellables)
+</code></pre><p>Если вставить этот код перед print(product...), то в консоли будет</p><pre><code>direct $price access: price '<span class="number">100.0</span>' will change
+price '<span class="number">100.0</span>' will change
+direct $price access: price '<span class="number">100.0</span>' will change
+<span class="number">150.0</span>
+</code></pre><p>т.к. на момент подписки на $price там уже было значение - мы тут же его получаем, а следующий print из <code></code><code>product.$price.sink</code><code></code> отработает уже во время увеличения price. Убедиться в этом можно закомментировав <code></code><code>print(product.increasePrice(by: 50))</code><code></code> таким образом пусть мы вообще не изменяем объект product - все равно подписка <code></code><code>product.$price.sink</code><code></code> отработает, напечатав при этом в консоль одну строку:</p><pre><code>direct $price access: price '<span class="number">100.0</span>' will change
+</code></pre><p>В принципе нам никто не запрещает в классе реализующем ObservableObject самим генерировать новые события в objectWillChange (хоть по таймеру) при необходимости.</p><p>Но мы в основном будем сталкиваться с ObservableObject именно в связке с SwiftUI, и мы будем напрямую работать со свойствами объектов реализующих ObservableObject, а события из objectWillChange будет перехватывать сам SwiftUI для того чтобы знать, что надо перерисовать View. По всей видимости именно для оптимизации эффективности генерируется willSet, а не didSet, т.к. это позволяет накапливать изменения и обновлять View реже.</p><p>Что же, рассмотрим первую обертку работающую с ObservableObject - ObservedObject.</p><h2>@ObservedObject</h2><p>Документация довольно немногословна, и говорит, что <a href="https://developer.apple.com/documentation/swiftui/observedobject">@ObservedObject</a> это обертка, которая подписывается на объект ObservableObject и обновляет View, когда данные объекта меняются. По сути это мост между данными хранящимися в ObservableObject и нашими View.</p><p>Кстати при выходе SwiftUI нам была доступна только эта обертка, @StateObject была добавлена позже (в так называемом SwiftUI 2.0, представленном на WWDC 2020), давайте на этом примере поймем почему пришлось добавить еще одну обертку.</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">class</span> AppState: <span class="type">ObservableObject</span> {
+    <span class="keyword">@Published var</span> counter: <span class="type">Int</span> = <span class="number">0</span>
+}
+
+<span class="keyword">struct</span> ObservedObjectExample: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> mainCounter = <span class="number">0</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(alignment: .<span class="dotAccess">center</span>, spacing: <span class="number">20</span>) {
+            <span class="type">Text</span>(<span class="string">"Main counter:</span> \(mainCounter)<span class="string">"</span>)
+                .<span class="call">font</span>(.<span class="dotAccess">title</span>)
+            <span class="type">Button</span>(<span class="string">"Increase main"</span>) {
+                mainCounter += <span class="number">1</span>
+            }
+
+            <span class="type">Divider</span>().<span class="call">padding</span>()
+
+            <span class="type">CounterView</span>()
+        }.<span class="call">padding</span>()
+    }
+}
+
+<span class="keyword">struct</span> CounterView: <span class="type">View</span> {
+    <span class="keyword">@ObservedObject var</span> appState = <span class="type">AppState</span>()
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(alignment: .<span class="dotAccess">center</span>, spacing: <span class="number">20</span>) {
+            <span class="type">Text</span>(<span class="string">"Child counter:</span> \(appState.<span class="property">counter</span>)<span class="string">"</span>)
+                .<span class="call">font</span>(.<span class="dotAccess">title</span>)
+            <span class="type">HStack</span>(spacing: <span class="number">20</span>) {
+                <span class="type">Button</span>(<span class="string">"Increase main"</span>) {
+                    appState.<span class="property">counter</span> += <span class="number">1</span>
+                }
+                
+                <span class="type">Button</span>(<span class="string">"Decrease"</span>) {
+                    appState.<span class="property">counter</span> = <span class="call">max</span>(<span class="number">0</span>, appState.<span class="property">counter</span> - <span class="number">1</span>)
+                }
+                .<span class="call">disabled</span>(appState.<span class="property">counter</span> == <span class="number">0</span>)
+            }
+        }
+    }
+}
+
+<span class="keyword">struct</span> ObservedObjectExample_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">ObservedObjectExample</span>()
+    }
+}
+</code></pre><p>Во View верхнего уровня ObservedObjectExample мы отображаем как @State счетчик mainCounter (в Text), так и ребенка CounterView, у которого внутри создается переменная типа AppState с указанной оберткой @ObservedObject</p><p>На первый взгляд проблем нет никаких, мы можем нажать кнопку "Increase main" для Main counter и это честно увеличит <code></code><code>@State private var mainCounter</code><code></code>, обновив ObservedObjectExample. Мы можем нажать Increase/Decrease для ребенка CounterView, что изменит данные в переменной AppState и SwiftUI честно перерисует CounterView. Где подвох?</p><p>А подвох в том, что если еще раз нажать "Increase main" для Main counter, счетчик Child counter обнулится.</p><p>Почему так случилось? На самом деле все просто, при нажатии на "Increase main" меняется mainCounter, что вызывает пересчет переменной body для ObservedObjectExample, что в свою очередь вызывает пересоздание CounterView. А при повторном создании CounterView у нас вновь инициализируется переменная appState со счетчиком counter = 0. Если не ожидать этого - неожиданное пересоздание переменной может стать очень неприятным сюрпризом.</p><p>Таким образом сферой применения @ObservedObject можно было бы считать:</p><ul><li>если вам нужно, чтобы происходило пересоздание состояния. Хотя тяжело представить зачем такое может быть нужно, т.к. одно дело когда это ожидаемое поведение (переход со списка List в DetailView), а другое дело приведенный выше пример, когда дочерний компонент неожиданно сбрасывает свое состояние.</li></ul><ul><li>если вы уверены, что переменная никогда не будет уничтожена, создаем к примеру на старте приложения внутри того же WindowGroup</li></ul><br/><p>Но как будет пояснено в разделе с @StateObject даже это не стоит делать.</p><h4>Остается одно применение @ObservedObject:</h4><br/><ul><li>если вам надо уже созданную переменную класса реализующего ObservableObject передать вниз по иерархии.</li></ul><h2>@StateObject</h2><p>После WWDC 2020 нам добавили еще одну обертку - <a href="https://developer.apple.com/documentation/swiftui/stateobject">@StateObject</a>, спасителя от пересоздания переменной при перерисовке View.</p><p>Для того, чтобы починить баг со сбросом состояния дочерней View при увеличения счетчика родительской - достаточно в CounterView сменить @ObservedObject на @StateObject.</p><p>Вернемся к теории, в документации для <strong>@StateObject</strong> написано "A property wrapper type that <strong>instantiates</strong> an observable object.", в то время как для <strong>@ObservedObject</strong> "A property wrapper type that <strong>subscribes</strong> to an observable object and invalidates a view whenever the observable object changes."</p><p>Таким образом Apple прямо говорит - не стоит создавать самим ObservedObject внутри View которое будет его использовать, создавать нужно только StateObject, а уже в дочерних View определять переменную как @ObservedObject.</p><p>Проследить путь appState и убедиться, что все причастные View работают с одним и тем же объектом appState можно в этом примере</p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">class</span> AppState: <span class="type">ObservableObject</span> {
+    <span class="keyword">@Published var</span> counter: <span class="type">Int</span> = <span class="number">0</span>
+}
+
+<span class="keyword">struct</span> StateObjectTestView: <span class="type">View</span> {
+    <span class="keyword">@StateObject private var</span> appState = <span class="type">AppState</span>()
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">NavigationView</span> {
+            <span class="type">List</span> {
+                <span class="type">Section</span>(header: <span class="type">Text</span>(<span class="string">"Observed Object"</span>)) {
+                    <span class="type">NavigationLink</span>(
+                        destination: <span class="type">NestedObservedObjectExample</span>(state: appState),
+                        label: {
+                            <span class="type">Text</span>(<span class="string">"Nested ObservedObject Example"</span>)
+                        })
+                }
+            }
+        }
+    }
+}
+
+<span class="keyword">struct</span> NestedObservedObjectExample: <span class="type">View</span> {
+    <span class="keyword">@ObservedObject var</span> state: <span class="type">AppState</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(alignment: .<span class="dotAccess">center</span>, spacing: <span class="number">20</span>) {
+            <span class="type">Text</span>(<span class="string">"Main counter:</span> \(state.<span class="property">counter</span>)<span class="string">"</span>)
+                .<span class="call">font</span>(.<span class="dotAccess">title</span>)
+            <span class="type">Button</span>(<span class="string">"Increase main"</span>) {
+                state.<span class="property">counter</span> += <span class="number">1</span>
+            }
+
+            <span class="type">Divider</span>().<span class="call">padding</span>()
+
+            <span class="type">NestedCounterView</span>(appState: state)
+        }.<span class="call">padding</span>()
+    }
+}
+
+<span class="keyword">struct</span> NestedCounterView: <span class="type">View</span> {
+    <span class="keyword">@ObservedObject var</span> appState: <span class="type">AppState</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span>(alignment: .<span class="dotAccess">center</span>, spacing: <span class="number">20</span>) {
+            <span class="type">Text</span>(<span class="string">"Child counter:</span> \(appState.<span class="property">counter</span>)<span class="string">"</span>)
+                .<span class="call">font</span>(.<span class="dotAccess">title</span>)
+            <span class="type">HStack</span>(spacing: <span class="number">20</span>) {
+                <span class="type">Button</span>(<span class="string">"Increase"</span>) {
+                    appState.<span class="property">counter</span> += <span class="number">1</span>
+                }
+
+                <span class="type">Button</span>(<span class="string">"Decrease"</span>) {
+                    appState.<span class="property">counter</span> = <span class="call">max</span>(<span class="number">0</span>, appState.<span class="property">counter</span> - <span class="number">1</span>)
+                }
+                .<span class="call">disabled</span>(appState.<span class="property">counter</span> == <span class="number">0</span>)
+            }
+        }
+    }
+}
+
+<span class="keyword">struct</span> StateObjectTestView_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">StateObjectTestView</span>()
+    }
+}
+</code></pre><p>Видно, что в корневой View (а можно было и в WindowGroup) мы определяем переменную как @StateObject, а во всех дочерних как @ObservedObject, и где бы мы не меняли appState.counter - данные будут обновлены во всех View.</p><p>Важно отметить, что @StateObject привязывается к конкретному экземпляру View, не к типу View.</p><h4>Область применения @StateObject:</h4><br/><ul><li>создавать объекты с данными внутри View, будучи уверенным, что они не обнулятся при перерисовке этого View. И это важный момент, если же пересоздастся родительская View (вернулись по навигационному стеку назад и зашли снова на родительскую View к примеру), то уже пересоздадутся и дочерние View, соответственно пересоздадутся и дочерние переменные, хоть они и @StateObject. Т.е. не стоит думать, что если мы пометили переменную как @StateObject, то она вообще никогда не пересоздастся, это работает только в рамках пересоздания внутри body родительской View.</li></ul><h2>@EnvironmentObject</h2><p>Практически Dependency Injection из коробки. По сути мало чем отличается от ObservedObject, в том смысле, что parent создает переменную, а дочерняя View получает к этой переменной доступ. Разница в том, что прикрепляя эту переменную к родительской View - все дети, и дети детей и т.д получают к ней доступ. Особенно это удобно, если эта переменная нужна только на самых нижних уровнях, т.к. нет необходимости прокидывать через все View посредники. Есть подводный камень, не всегда ясно, будет ли передан environmentObject для дочерних View созданных посредтвом alert, sheet, navigationLink. На WWDC 2021 разработчики apple рекомендовали для этих случаев проставлять вручную envirionmentObject</p><p>Original Question: I’ve had several intermittent crashes from environment objects being nil when I pass them to a sheet or NavigationLink. It’s tricky to replicate due to being intermittent and I usually work around it by architecting my code differently to avoid passing environment objects. Do you know of reasons this might happen? All I can think of is that the views that originate the environmentObject further up the view hierarchy are being taken out of memory. Thanks for any help you can provide!</p><p>Answer (engineer #1): NavigationLink by design doesn’t flow EnvironmentObjects through to its destination as it’s unclear where the environmentObject should be inherited from. I suspect this might what’s causing your issue. In order to get the behavior you expect, you’ll have to explicitly pass the environmentObject through at that point.</p><p>Answer (engineer #2):You can also apply the environmentObject to the NavigationView itself, which will make it available to all pushed content.</p><pre><code>
+
+<span class="keyword">struct</span> ContentView: <span class="type">View</span> {
+    <span class="keyword">@StateObject private var</span> appState = <span class="type">AppState</span>()
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">NavigationView</span> {
+            <span class="type">List</span> {
+            	...
+            	<span class="type">Section</span>(header: <span class="type">Text</span>(<span class="string">"Environment Object"</span>)) {
+                    <span class="type">NavigationLink</span>(
+                        destination: <span class="type">EnvironmentObjectExample</span>()
+                            .<span class="call">environmentObject</span>(appState),
+                        label: {
+                            <span class="type">Text</span>(<span class="string">"EnvironmentObject Example"</span>)
+                        })
+                }
+            ...
+}     
+
+
+
+<span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> EnvironmentObjectExample: <span class="type">View</span> {
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span> {
+            <span class="type">Text</span>(<span class="string">"Main"</span>)
+            <span class="type">Child1EnvironmentObjectExample</span>()
+        }
+    }
+}
+
+<span class="keyword">struct</span> Child1EnvironmentObjectExample: <span class="type">View</span> {
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span> {
+            <span class="type">Text</span>(<span class="string">"Child1"</span>)
+            <span class="type">Child2EnvironmentObjectExample</span>()
+        }
+    }
+}
+
+<span class="keyword">struct</span> Child2EnvironmentObjectExample: <span class="type">View</span> {
+    <span class="keyword">@EnvironmentObject var</span> appState: <span class="type">AppState</span>
+    
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span> {
+            <span class="type">Text</span>(<span class="string">"Child2"</span>)
+            <span class="type">Text</span>(<span class="string">"Environment counter:</span> \(appState.<span class="property">counter</span>)<span class="string">"</span>)
+                .<span class="call">font</span>(.<span class="dotAccess">title</span>)
+            <span class="type">Button</span>(<span class="string">"Increase main"</span>) {
+                appState.<span class="property">counter</span> += <span class="number">1</span>
+            }
+        }
+    }
+}
+</code></pre><p>Из примера можно извлечь следующее:</p><ul><li>чтобы проставить environmentObject нужно для корневой View проставить .environmentObject(&lt;object&gt;) <br/></li></ul><ul><li>получать доступ можно в любой дочернeй View на любой глубине с помощью</li></ul><br/><pre><code><span class="keyword">@EnvironmentObject var</span> varName: <span class="type">Type</span> 
+</code></pre><ul><li>создавать объекты для environment так же стоит с помощью @StateObject. Но нужно быть очень аккуратным, т.к. если мы забыли проставить <code>.environmentObject(object)</code> - при попытке открыть View использующее отсутствующий EnvironmentObject - вылетит Fatal error.</li></ul><br/><p>Так же естественным ограничением является то, что можно положить в Environment только один объект определенного типа для конкретной иерархии View, т.к. доступ идет по типу, а не по имени (.environmentObject(&lt;object&gt;))</p><h4>Область применения @EnvironmentObject:</h4><br/><ul><li>если объект используется детьми View и нужен всего 1 объект данного типа, особенно если объект нужен не всем View в цепочке создания, а где то глубоко внизу в цепочке созданных View, чтобы не передавать постоянно ObservedObject явно от родителя к ребенку, коль большинству View это все равно это не нужно.</li></ul><br/><h4>Про остальные обертки вкратце</h4><br/><p>Есть так же обертки для частных случаев. Подробно я из разбирать не буду, просто упомяну</p><ul><li>@AppStorage, по сути прокси для UserDefaults</li><li>@FetchRequest, позволяет получить доступ к CoreData объектам из View</li><li>@SceneStorage, в основном используется для state restoration, чтобы после перезапуска приложения мы могли показать приложение в том виде в котором оно находилось перед закрытие (положение, позиция внутри экрана и т.д.)</li></ul></div><span>Tagged with: </span><ul class="tag-list"><li><a href="/tags/swift">swift</a></li><li><a href="/tags/property-wrappers">property wrappers</a></li><li><a href="/tags/swiftui">swiftui</a></li><li><a href="/tags/state">state</a></li><li><a href="/tags/binding">binding</a></li><li><a href="/tags/stateobject">stateobject</a></li><li><a href="/tags/observedobject">observedobject</a></li><li><a href="/tags/environmentobject">environmentobject</a></li></ul></article></div><footer><p>Мои контакты: <a href="http://twitter.com/sparkLonet">Twitter</a>, <a href="https://github.com/sparklone">GitHub</a>, <a href="https://t.me/SparkLone">Telegram</a></p><p><a href="/feed.rss">RSS feed</a></p><p>Generated using <a href="https://github.com/johnsundell/publish">Publish</a></p></footer></body></html>
