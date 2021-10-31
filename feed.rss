@@ -1,4 +1,524 @@
-<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content"><channel><title>Каморка сурового программиста, дубль 2</title><description>Блог о технологиях, преимущественно о Swift и обо всём, что связано с Apple</description><link>https://sparklone.github.io</link><language>ru</language><lastBuildDate>Sun, 27 Jun 2021 17:57:33 +0300</lastBuildDate><pubDate>Sun, 27 Jun 2021 17:57:33 +0300</pubDate><ttl>250</ttl><atom:link href="https://sparklone.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://sparklone.github.io/articles/working-with-data-in-swiftui</guid><title>Как работать с данными в SwiftUI</title><description>Как работать с данными в SwiftUI: @State, @Binding, @StateObject, @ObservedObject, @EnvironmentObject. Разбираемся какие и когда стоит использовать.</description><link>https://sparklone.github.io/articles/working-with-data-in-swiftui</link><pubDate>Sun, 27 Jun 2021 15:30:00 +0300</pubDate><content:encoded><![CDATA[<h1>Как работать с данными в SwiftUI</h1><p>SwiftUI богат обертками для работы с данными. Подробней ознакомиться с тем, что такое Property Wrapper'ы (обертки) и с чем их едят можно в моей предыдущей статье <a href="https://sparklone.github.io/articles/property-wrappers-in-swift/">Property Wrappers в Swift</a></p><p>Так что в этой статье мы рассмотрим практическое применение существующих оберток для работы с данными в SwiftUI.</p><p>Основной момент: если меняется значение внутри переменной любой из указанных оберток, и эта переменная используется внутри переменной body, - переменная body будет вычислена повторно, таким образом View обновится (перерисуется).</p><p>Итак, первой оберткой является State.</p><h2>@State</h2><p>Исходя из документации Apple <a href="https://developer.apple.com/documentation/swiftui/state">State</a> необходимо использовать для хранения данных конкретной View. <a href="https://developer.apple.com/documentation/swiftui/state-and-data-flow">Здесь</a> Apple советует в @State хранить именно UI состояние, а не бизнес логику. <em>"Manage transient UI state locally within a view by wrapping value types as State properties."</em></p><p>Более того очень важно работать с этой переменной только внутри View, где она была объявлена, причем только из переменной body, или из методов которые вызываются из переменной body. Поэтому всегда стоит @State объявлять приватной переменной.</p><p><em>"You should only access a state property from inside the view’s body, or from methods called by it. For this reason, declare your state properties as private, to prevent clients of your view from accessing them. It is safe to mutate state properties from any thread."</em></p><p>Приведу простой пример использования @State, он искусственный (как раз View-счетчик обычно полезно инициализировать значениями извне), но с ним проще играться.</p><pre><code><span class="keyword">import</span> SwiftUI
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content"><channel><title>Каморка сурового программиста, дубль 2</title><description>Блог о технологиях, преимущественно о Swift и обо всём, что связано с Apple</description><link>https://sparklone.github.io</link><language>ru</language><lastBuildDate>Sun, 31 Oct 2021 17:14:22 +0300</lastBuildDate><pubDate>Sun, 31 Oct 2021 17:14:22 +0300</pubDate><ttl>250</ttl><atom:link href="https://sparklone.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://sparklone.github.io/articles/dynamic-delete-elements-from-lists-in-swiftui</guid><title>Динамическое удаление элементов из списков в SwiftUI, проблемы и решения.</title><description>Проблемы с удалением элемента списка когда открыт дочерний экран и их решение.</description><link>https://sparklone.github.io/articles/dynamic-delete-elements-from-lists-in-swiftui</link><pubDate>Sun, 31 Oct 2021 17:00:00 +0300</pubDate><content:encoded><![CDATA[<h1>Динамическое удаление элементов из списков в SwiftUI, проблемы и решения.</h1><p>Для начала поговорим о списках в SwiftUI. Если конкретнее - о том как передавать из родительской View данные в дочерние экраны. Вот ссылка на проект, в котором можно найти исходный код из статьи: <a href="https://github.com/sparklone/SwiftUILists">Исходники</a>. Должен предупредить, что компилируется только в Xcode 13, чтобы можно было запустить в 12м надо дорабатывать напильником, т.к. новая SwiftUI конструкция для обхода массива с поддержкой Binding в Xcode 12 не поддерживается.</p><p>Начнем с базового вопроса, зачем нужны списки, какие аналоги в UIKit? Списком в SwiftUI является List, аналогом в UIKit будет UITableView, более того изначальная реализация List под капотом явно была построена поверх UITableView.</p><p>Что можно сказать хорошого про списки в SwiftUI? Они прям очень простые, ими очень приятно пользоваться.. Когда это работает. Что можно сказать плохого? Работает это далеко не всегда, и что хуже всего поведение меняется от версии к версии iOS, что совсем не хорошо.</p><p>Следующие примеры можно найти в ListsPlayground внутри проекта</p><ul><li>Простейший список "1. ConstantList":</li></ul><br/><pre><code><span class="keyword">import</span> SwiftUI
+<span class="keyword">import</span> PlaygroundSupport
+
+<span class="keyword">struct</span> ContentView: <span class="type">View</span> {
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span> {
+            <span class="type">Text</span>(<span class="string">"First"</span>)
+            <span class="type">Text</span>(<span class="string">"Second"</span>)
+        }
+    }
+}
+
+<span class="type">PlaygroundPage</span>.<span class="property">current</span>.<span class="call">setLiveView</span>(<span class="type">ContentView</span>())
+</code></pre><p>И все, простейшая статическая табличка. Можно помещать внутрь любые кастомные View</p><p>Но статика это скучно, а если хочется динамически строить список?</p><ul><li>Тоже не сложно, "2. ListFromVar":</li></ul><br/><pre><code><span class="keyword">import</span> SwiftUI
+<span class="keyword">import</span> PlaygroundSupport
+
+<span class="keyword">struct</span> Element {
+    <span class="keyword">var</span> name: <span class="type">String</span>
+}
+
+<span class="keyword">struct</span> ListFromVar: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> elements: [<span class="type">Element</span>] = [
+        .<span class="keyword">init</span>(name: <span class="string">"First"</span>),
+        .<span class="keyword">init</span>(name: <span class="string">"Second"</span>)
+    ]
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span>(elements, id: \.<span class="property">name</span>) { element <span class="keyword">in</span>
+            <span class="type">Text</span>(element.<span class="property">name</span>)
+        }
+    }
+}
+
+<span class="type">PlaygroundPage</span>.<span class="property">current</span>.<span class="call">setLiveView</span>(<span class="type">ListFromVar</span>())
+</code></pre><p>Списку надо указать по какому признаку элемент будет уникальным, в нашем случае это name. Конечно обычно используется уникальный id (если в нашем примере сделать два "First" - будут проблемы). И чтобы упростить жизнь, можно указать для нашей модели, что она реализует протокол Identifiable, требованием протокола является наличие переменной id: Hashable. UUID удовлетворяет этому условию. Это позволяет не указывать id: .id в параметрах для List</p><ul><li>"3. ListFromVarId":</li></ul><br/><pre><code><span class="keyword">import</span> SwiftUI
+<span class="keyword">import</span> PlaygroundSupport
+
+<span class="keyword">struct</span> Element: <span class="type">Identifiable</span> {
+    <span class="keyword">var</span> id: <span class="type">UUID</span> = <span class="type">UUID</span>()
+    <span class="keyword">var</span> name: <span class="type">String</span>
+}
+
+<span class="keyword">struct</span> ListFromVar: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> elements: [<span class="type">Element</span>] = [
+        .<span class="keyword">init</span>(name: <span class="string">"First"</span>),
+        .<span class="keyword">init</span>(name: <span class="string">"Second"</span>),
+        .<span class="keyword">init</span>(name: <span class="string">"First"</span>)
+    ]
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span>(elements) { element <span class="keyword">in</span>
+            <span class="type">Text</span>(element.<span class="property">name</span>)
+        }
+    }
+}
+
+<span class="type">PlaygroundPage</span>.<span class="property">current</span>.<span class="call">setLiveView</span>(<span class="type">ListFromVar</span>())
+
+</code></pre><p>А что если мы захотим свайпом удалять элементы из списка? С этим нам поможет ForEach внутри List, к которому можно добавлять модификаторы. В нашем случае нужен модификатор onDelete</p><ul><li>"4. ListForEach":</li></ul><br/><pre><code><span class="keyword">import</span> SwiftUI
+<span class="keyword">import</span> PlaygroundSupport
+
+<span class="keyword">struct</span> Element: <span class="type">Identifiable</span> {
+    <span class="keyword">var</span> id: <span class="type">UUID</span> = <span class="type">UUID</span>()
+    <span class="keyword">var</span> name: <span class="type">String</span>
+}
+
+<span class="keyword">struct</span> ListForEach: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> elements: [<span class="type">Element</span>] = [
+        .<span class="keyword">init</span>(name: <span class="string">"First"</span>),
+        .<span class="keyword">init</span>(name: <span class="string">"Second"</span>),
+        .<span class="keyword">init</span>(name: <span class="string">"First"</span>)
+    ]
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span> {
+            <span class="type">ForEach</span>(elements) { element <span class="keyword">in</span>
+                <span class="type">Text</span>(element.<span class="property">name</span>)
+            }
+            .<span class="call">onDelete</span> { indexSet <span class="keyword">in</span>
+                elements.<span class="call">remove</span>(atOffsets: indexSet)
+            }
+        }
+    }
+}
+
+<span class="type">PlaygroundPage</span>.<span class="property">current</span>.<span class="call">setLiveView</span>(<span class="type">ListForEach</span>())
+</code></pre><p>И последний кубик знаний, которого нам не хватает. Как сделать, чтобы по нажатию на элемент списка происходила навигация внутрь нового экрана? С этим поможет NavigationLink, Ну и обязательно на самом верхнем уровне должна быть NavigationView.</p><ul><li>"5. ListNavigation":</li></ul><br/><pre><code><span class="keyword">import</span> SwiftUI
+<span class="keyword">import</span> PlaygroundSupport
+
+<span class="keyword">struct</span> Element: <span class="type">Identifiable</span> {
+    <span class="keyword">var</span> id: <span class="type">UUID</span> = <span class="type">UUID</span>()
+    <span class="keyword">var</span> name: <span class="type">String</span>
+}
+
+<span class="keyword">struct</span> ListElement: <span class="type">View</span> {
+    <span class="keyword">let</span> element: <span class="type">Element</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">Text</span>(element.<span class="property">name</span>)
+            .<span class="call">foregroundColor</span>(.<span class="dotAccess">red</span>)
+    }
+}
+
+<span class="keyword">struct</span> ListForEach: <span class="type">View</span> {
+    <span class="keyword">@State private var</span> elements: [<span class="type">Element</span>] = [
+        .<span class="keyword">init</span>(name: <span class="string">"First"</span>),
+        .<span class="keyword">init</span>(name: <span class="string">"Second"</span>),
+        .<span class="keyword">init</span>(name: <span class="string">"First"</span>)
+    ]
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">NavigationView</span> {
+            <span class="type">List</span> {
+                <span class="type">ForEach</span>(elements) { element <span class="keyword">in</span>
+                    <span class="type">NavigationLink</span>(destination: <span class="type">ListElement</span>(element: element)) {
+                        <span class="type">Text</span>(element.<span class="property">name</span>)
+                    }
+                }
+                .<span class="call">onDelete</span> { indexSet <span class="keyword">in</span>
+                    elements.<span class="call">remove</span>(atOffsets: indexSet)
+                }
+            }
+        }
+    }
+}
+
+<span class="type">PlaygroundPage</span>.<span class="property">current</span>.<span class="call">setLiveView</span>(<span class="type">ListForEach</span>())
+
+</code></pre><p>По сути мы быстро пробежались по основам списка и готовы начать разбираться с более интересными вопросами, а что к примеру произойдет, если в тот момент как мы перешли из списка на дочерний экран - элемент будет удален из списка? Или будет ли обновляться дочерний экране, если поменялось значение текущего элемента?</p><p>Дальнейшие примеры будут уже не в плейграунде, а внутри проекта. Вкратце пробегусь по структуре проекта.</p><ul><li>SwiftUIListDataFlowApp - точка входа</li><li>ViewModifiers/NavigationButtons, хелпер позволяющий добавлять кнопки обновления записи и ее удаления в одну строчку (withEditNavigationButtons)</li><li>Helpers/ForEach+Binding - хелпер позволяющий на Xcode 12 использовать биндинги с ForEach. Но сразу предупреждаю, использование этого кода может приводить к крешам, он представлен скорее в виде исторической справки как приходилось ухищряться до введения Apple'ом нативного решения.</li><li>папка Models - здесь находится наша структура данных User, и manager позволяющий работать со списком пользователей - UsersManager: ObservableObject</li><li>папка Views - как не сложно догадаться содержит все View<ul><li>UsersView - основная View, сделана в виде статического списка позволяющего открывать рассматриваемые нами примеры</li></ul></li></ul><br/><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> UsersView: <span class="type">View</span> {
+    <span class="keyword">private static var</span> firstRun = <span class="keyword">true
+    @EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span> {
+            <span class="type">Section</span>(header: <span class="type">Text</span>(<span class="string">"Read only"</span>)) {
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListViewConstants</span>(checkDeletion: <span class="keyword">false</span>)) {
+                    <span class="type">Text</span>(<span class="string">"Simple list without bindings"</span>)
+                }
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListViewConstants</span>(checkDeletion: <span class="keyword">true</span>)) {
+                    <span class="type">Text</span>(<span class="string">"Simple list without bindings, check deletion"</span>)
+                }
+                <span class="type">NavigationLink</span>(destination: <span class="type">UserViewCheckDeletion</span>(user: usersManager.<span class="property">users</span>.<span class="property">first</span> ?? <span class="type">UsersAPI</span>.<span class="property">dumpUsers</span>[<span class="number">1</span>])) {
+                    <span class="type">Text</span>(<span class="string">"Just user:</span> \((usersManager.<span class="property">users</span>.<span class="property">first</span> ?? <span class="type">UsersAPI</span>.<span class="property">dumpUsers</span>[<span class="number">1</span>]).<span class="property">name</span>)<span class="string">"</span>)
+                }
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListViewIndices</span>()) {
+                    <span class="type">Text</span>(<span class="string">"Simple list without bindings, indices"</span>)
+                }
+            }
+            <span class="type">Section</span>(header: <span class="type">Text</span>(<span class="string">"With bindings, Readonly"</span>)) {
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListViewBinding</span>()) {
+                    <span class="type">Text</span>(<span class="string">"List with custom bindings"</span>)
+                }
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListWithBindingsXcode13</span>(userViewKind: .<span class="dotAccess">readonly</span>)) {
+                    <span class="type">Text</span>(<span class="string">"List with Xcode 13 bindings, no check deletion"</span>)
+                }
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListWithBindingsXcode13</span>(userViewKind: .<span class="dotAccess">checkDeletion</span>)) {
+                    <span class="type">Text</span>(<span class="string">"List with Xcode 13 bindings, check deletion"</span>)
+                }
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListWithBindingsXcode13</span>(userViewKind: .<span class="dotAccess">useCache</span>)) {
+                    <span class="type">Text</span>(<span class="string">"List with Xcode 13 bindings, check deletion, cache users"</span>)
+                }
+            }
+            <span class="type">Section</span>(header: <span class="type">Text</span>(<span class="string">"With bindings, Editable"</span>)) {
+                <span class="type">NavigationLink</span>(destination: <span class="type">ListWithBindingsXcode13</span>(userViewKind: .<span class="dotAccess">editable</span>)) {
+                    <span class="type">Text</span>(<span class="string">"List with Xcode 13 bindings, editable"</span>)
+                }
+            }
+        }
+        .<span class="call">navigationBarTitle</span>(<span class="string">"Lists of lists =)"</span>, displayMode: .<span class="dotAccess">inline</span>)
+    }
+}
+
+<span class="keyword">struct</span> UsersView_Previews: <span class="type">PreviewProvider</span> {
+    <span class="keyword">static var</span> previews: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">UsersView</span>()
+    }
+}
+
+</code></pre><ul><li>UserInfoView - простая вьюшка отображающая свойства модели, используется другими вьюшками, чтобы не повторяться<ul></ul></li></ul><br/><pre><code><span class="keyword">struct</span> UserInfoView: <span class="type">View</span> {
+    <span class="keyword">let</span> user: <span class="type">User</span>
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span> {
+            <span class="type">Text</span>(<span class="string">"Name:</span> \(user.<span class="property">name</span>)<span class="string">"</span>)
+            <span class="type">Text</span>(<span class="string">"Surname:</span> \(user.<span class="property">surname</span>)<span class="string">"</span>)
+            <span class="type">Text</span>(<span class="string">"Views:</span> \(user.<span class="property">views</span>)<span class="string">"</span>)
+        }
+    }
+}
+</code></pre><ul><li>Lists, папка внутри которой указаны различные подходы к тому как делать списки<ul><li>UserViewVariations, папка внутри которой помещены всевозможные вариации View для показа и манипулирования данными выбранного User</li></ul></li></ul><p>Итак, начнем с простейшего случая, когда у нас список проходится по всем элементам массива, и передает элемент как копию внутрь дочерней View Запускаем приложение и выбираем пункт "Simple list without bindings"</p><p>Список строится этой View</p><br/><pre><code><span class="keyword">struct</span> ListViewConstants: <span class="type">View</span> {
+    <span class="keyword">let</span> checkDeletion: <span class="type">Bool</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span> {
+            <span class="type">ForEach</span>(usersManager.<span class="property">users</span>) { user <span class="keyword">in
+                let</span> _ = <span class="call">print</span>(user)
+                <span class="keyword">if</span> checkDeletion {
+                    <span class="type">NavigationLink</span>(
+                        destination: <span class="type">UserViewCheckDeletion</span>(user: user),
+                        label: { <span class="type">Text</span>(user.<span class="property">name</span>) }
+                    )
+                } <span class="keyword">else</span> {
+                    <span class="type">NavigationLink</span>(
+                        destination: <span class="type">UserView</span>(user: user),
+                        label: { <span class="type">Text</span>(user.<span class="property">name</span>) }
+                    )
+                }
+
+            }
+            .<span class="call">onDelete</span> { indexSet <span class="keyword">in</span>
+                usersManager.<span class="call">removeUsers</span>(indexSet: indexSet)
+            }
+        }
+        .<span class="call">navigationBarTitle</span>(<span class="string">"Constants list"</span>, displayMode: .<span class="dotAccess">inline</span>)
+    }
+}
+</code></pre><p>Вызов будет как ListViewConstants(checkDeletion: false), поэтому отработает ветка else { и будет показана простейшая UserView</p><br/><pre><code><span class="keyword">struct</span> UserView: <span class="type">View</span> {
+    <span class="keyword">let</span> user: <span class="type">User</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">UserInfoView</span>(user: user)
+            .<span class="call">withEditNavigationButtons</span>(user: user, usersManager: usersManager)
+            .<span class="call">onAppear</span> {
+                <span class="call">print</span>(<span class="string">"UserView appear with user:</span> \(user)<span class="string">"</span>)
+            }
+    }
+}
+</code></pre><p>Если зайти внутрь какого либо элемента, мы увидим экран:</p><br/><img src="https://sparklone.github.io/blog/images/dynamic-delete-elements-from-lists-in-swiftui/static-list.png" width="300" border="1"/><br/><p>У нас есть в навигации две кнопки: Update и Delete, первая просит менеджер проставить текущему User имя равное "New name", вторая удаляет текущий User. Т.к. внутри View передается user обычной переменной, не через @Binding, нам по хорошему надо извлечь id от User и по этому id искать - есть ли в списке пользователь с таким id. Чтобы не делать это в каждой View, UsersManager имеет метод, у которого это все производится под капотом</p><br/><pre><code><span class="keyword">func</span> set(name: <span class="type">String</span>, to user: <span class="type">User</span>) <span class="keyword">throws</span> {
+    <span class="type">DispatchQueue</span>.<span class="property">main</span>.<span class="call">async</span> { [<span class="keyword">self</span>] <span class="keyword">in</span>
+        <span class="call">print</span>(<span class="string">"try to set name</span> \(name) <span class="string">for</span> \(user)<span class="string">"</span>)
+        <span class="keyword">guard let</span> index = users.<span class="call">firstIndex</span>(where: { $0.<span class="property">id</span> == user.<span class="property">id</span> }) <span class="keyword">else</span> {
+            <span class="call">print</span>(<span class="string">"can't find user:</span> \(user)<span class="string">"</span>)
+            <span class="keyword">return</span>
+        }
+        users[index].name = name
+    }
+}
+</code></pre><p>Проверяем работу кнопки Update, после нажатия мы видим, что хоть сама ссылка на UsersManager была в родительской View, обновление данных происходит и в дочерней View. Теперь нажимаем Delete, и тут важный момент, все сильно зависит от условий запуска приложения.</p><ul><li>если таргетом является устройство на основе iOS 15 то при нажатии Delete<ul><li>если выбран первый элемент в списке, - нас выкинет на сам список система</li><li>если не первый - ничего не произойдет, мы останемся на дочернем экране</li></ul></li></ul><ul><li>если таргетом является устройство на основе iOS 14 то при нажатии Delete ничего не произойдет, не зависимо от индекса выбранного элемента. <br/> И это тот самый момент, о котором я говорил в начале статьи. Не очень весело наблюдать за тем, как идентичный, я бы сказал простейший код отрабатывает настолько по разному на разных версиях iOS.</li></ul><br/><p>Вот и попробуем как то обойти эту проблему, чтобы при удалении элемента на основе которого показан дочерний экран из менеджера мы могли покинуть дочерний экран прописав необходимую реакцию (P.S. в нашем случае удаление вызвано нами же, естественно не проблема сделать любую реакцию по нажатию на кнопку Delete, речь идет о том, если удаление произошло по какому то событию вне нашего контроля, вернулся результат какого то сетевого запроса или еще что случилось)</p><br/><p>onChange</p><br/><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> UserViewCheckDeletion: <span class="type">View</span> {
+    <span class="keyword">let</span> user: <span class="type">User</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">@State private var</span> userWasDeleted: <span class="type">Bool</span> = <span class="keyword">false
+    @Environment</span>(\.<span class="property">presentationMode</span>) <span class="keyword">var</span> presentationMode
+
+<span class="comment">//    init(user: User) {
+//        print("init: UserViewCheckDeletion with user \(user)")
+//        self.user = user
+//    }</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">UserInfoView</span>(user: user)
+            .<span class="call">withEditNavigationButtons</span>(user: user, usersManager: usersManager)
+<span class="comment">//            .onAppear {
+//                print("UserViewCheckDeletion appear with user: \(user)")
+//            }</span>
+            .<span class="call">alert</span>(isPresented: $userWasDeleted, content: {
+                <span class="type">Alert</span>(
+                    title: <span class="type">Text</span>(<span class="string">"User was deleted"</span>),
+                    dismissButton: <span class="type">Alert</span>.<span class="type">Button</span>.<span class="call">cancel</span>(<span class="type">Text</span>(<span class="string">"OK"</span>), action: {
+                        presentationMode.<span class="property">wrappedValue</span>.<span class="call">dismiss</span>()
+                    })
+                )
+            })
+            .<span class="call">onChange</span>(of: usersManager.<span class="property">users</span>) { users <span class="keyword">in</span>
+                <span class="call">print</span>(<span class="string">"UserViewCheckDeletion (onChange) users update:</span> \(users)<span class="string">"</span>)
+                <span class="keyword">if</span> !users.<span class="call">map</span>(\.<span class="property">id</span>).<span class="call">contains</span>(user.<span class="property">id</span>) {
+                    userWasDeleted = <span class="keyword">true</span>
+                }
+            }
+<span class="comment">//            .onReceive(usersManager.$users) { users in
+//                print("UserViewCheckDeletion (onReceive) users update: \(users)")
+//                if !users.map(\.id).contains(user.id) {
+//                    userWasDeleted = true
+//                }
+//            }</span>
+    }
+}
+</code></pre><p>Идея была в следующем, есть такой метод, onChange, он генерирует новые данные каждый раз когда они обновляются, то что нам надо.</p><p>Запускаем программу на iOS 15, выбираем пункт "Simple list without bindings, check deletion, заходим на любого пользователя, жмем Delete и все отрабатывает как надо. В метод onChange прилетает обновленный список users,в нем уже отсутствует тот, которым был инициирован экран, соответственно мы понимаем, что элемент был удален, ну и реагируем, показываем алерт и выполняем навигацию на предыдущий экран.</p><p>Хорошо, что все это отрабатывает даже для первого элемента (как мы помним в предыдущем примере в iOS 15 при удалении первого элемента система сама без предупреждения выкидывает на список обратно). Плохо то.. Что это не работает для iOS 14. Запускаем симулятор для iOS 14, повторяем все шаги, нажатие на Delete не приводит визуально ни к чему. Починить это можно двумя способами.</p><ol><li>раскомментировать строчку .navigationViewStyle(StackNavigationViewStyle())</li></ol><br/><pre><code><span class="keyword">struct</span> SwiftUIListDataFlowApp: <span class="type">App</span> {
+    <span class="keyword">let</span> usersManager = <span class="type">UsersManager</span>(usersApi: <span class="type">UsersAPI</span>())
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">Scene</span> {
+        <span class="type">WindowGroup</span> {
+            <span class="type">NavigationView</span> {
+                <span class="type">UsersView</span>()
+            }
+<span class="comment">//            .navigationViewStyle(StackNavigationViewStyle())</span>
+            .<span class="call">environmentObject</span>(usersManager)
+            .<span class="call">onAppear</span> {
+                usersManager.<span class="call">getUsers</span>()
+            }
+        }
+    }
+}
+
+</code></pre><p>это поменяет тип навигации, по умолчанию используется DoubleColumnNavigationViewStyle, баг может быть из за двойного вложения списка в список. Но если код будет и на iPad - то потеряем возможность иметь две колонки (SplitView), нужно в общем выбирать надо или нет это.</p><ol start="2"><li>вместо как мне кажется более подходящего onChange использовать onReceive, минусом данного подхода будет то, что onReceive срабатывает чаще, при заходе на экран в том числе, так что следует быть аккуратней</li></ol><br/><pre><code><span class="keyword">struct</span> UserViewCheckDeletion: <span class="type">View</span> {
+    <span class="keyword">let</span> user: <span class="type">User</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">@State private var</span> userWasDeleted: <span class="type">Bool</span> = <span class="keyword">false
+    @Environment</span>(\.<span class="property">presentationMode</span>) <span class="keyword">var</span> presentationMode
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">UserInfoView</span>(user: user)
+            .<span class="call">withEditNavigationButtons</span>(user: user, usersManager: usersManager)
+<span class="comment">//            .onAppear {
+//                print("UserViewCheckDeletion appear with user: \(user)")
+//            }</span>
+            .<span class="call">alert</span>(isPresented: $userWasDeleted, content: {
+                <span class="type">Alert</span>(
+                    title: <span class="type">Text</span>(<span class="string">"User was deleted"</span>),
+                    dismissButton: <span class="type">Alert</span>.<span class="type">Button</span>.<span class="call">cancel</span>(<span class="type">Text</span>(<span class="string">"OK"</span>), action: {
+                        presentationMode.<span class="property">wrappedValue</span>.<span class="call">dismiss</span>()
+                    })
+                )
+            })
+<span class="comment">//            .onChange(of: usersManager.users) { users in
+//                print("UserViewCheckDeletion (onChange) users update: \(users)")
+//                if !users.map(\.id).contains(user.id) {
+//                    userWasDeleted = true
+//                }
+//            }</span>
+            .<span class="call">onReceive</span>(usersManager.$users) { users <span class="keyword">in</span>
+                <span class="call">print</span>(<span class="string">"UserViewCheckDeletion (onReceive) users update:</span> \(users)<span class="string">"</span>)
+                <span class="keyword">if</span> !users.<span class="call">map</span>(\.<span class="property">id</span>).<span class="call">contains</span>(user.<span class="property">id</span>) {
+                    userWasDeleted = <span class="keyword">true</span>
+                }
+            }
+    }
+}
+</code></pre><p>Теперь решение работает и на iOS 14 и на iOS 15</p><p>Чтобы проверить свою теорию, что баг вызван вложенностью списков, следующий элемент ведет напрямую на дочернее вью, выбираем в основном списке элемент "Just user: Alexandr". Здесь кнопка Delete отработает как на iOS 14 так и на iOS 15, как с onChange, так и с onReceive.</p><ul><li>Нередко я встречал совет, что надо перебирать в списке не сами элементы, а индексы, мол это даст индекс из коробки, по которому потом можно доставать элемент или Binding.</li></ul><br/><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> ListViewIndices: <span class="type">View</span> {
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+    
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span> {
+            <span class="type">ForEach</span>(usersManager.<span class="property">users</span>.<span class="property">indices</span>, id: \.<span class="keyword">self</span>) { index <span class="keyword">in</span>
+                <span class="type">NavigationLink</span>(
+                    destination: <span class="type">UserView</span>(user: usersManager.<span class="property">users</span>[index]),
+                    label: { <span class="type">Text</span>(usersManager.<span class="property">users</span>[index].name) }
+                )
+            }
+            .<span class="call">onDelete</span> { indexSet <span class="keyword">in</span>
+                usersManager.<span class="call">removeUsers</span>(indexSet: indexSet)
+            }
+        }
+        .<span class="call">navigationBarTitle</span>(<span class="string">"Constants list"</span>, displayMode: .<span class="dotAccess">inline</span>)
+        .<span class="call">navigationBarItems</span>(
+            trailing: <span class="type">Button</span>(<span class="string">"Reload"</span>) {
+                usersManager.<span class="call">getUsers</span>()
+            }
+        )
+    }
+}
+</code></pre><p>Так вот, так делать не стоит. Таким образом мы говорим списку, что он должен различать элементы массива по их индексам, т.к. список теряет возможность по факту отличать элементы друг от друга. Выбираем в основном списке "Simple list without bindings, indices", заходим на первого юзера (Alexandr) и жмем Delete. В результате данные нашей View меняются на данные юзера Bob. В принципе это предсказуемо, т.к. как я уже говори идентификатором является сам индекс, число элементов изменилось, это вызвало перерисовку, элемент с индексом 0 был Alexandr стал Bob, SwiftUI посчитал, что элемент не удалился, а обновился. Более того XCode в зависимости от места использования может выдавать ворнинг про то, что мы используем ForEach не так как задумано</p><br/><pre><code><span class="type">ForEach</span>(_:content:) should only be used <span class="keyword">for</span> *constant* data. <span class="type">Instead</span> conform
+data to <span class="type">Identifiable</span> or use <span class="type">ForEach</span>(_:id:content:) and provide an explicit id!
+</code></pre><p>На этом мы закрываем секцию с View, которые инициализируются обычными переменными и переходим к разделу, где в дочерних View ожидаются @Bindable.</p><p>Начнем с истории. До Xcode 13 из коробки нельзя было получить для списка Binding значение. И люди шли на всевозможные ухищрения, от простейших типа</p><br/><pre><code><span class="type">ForEach</span>(<span class="type">Array</span>(array.<span class="call">enumerated</span>()), id: \.<span class="property">offset</span>) { index, element <span class="keyword">in</span>
+</code></pre><p>или</p><br/><pre><code><span class="type">ForEach</span>(<span class="type">Array</span>(<span class="call">zip</span>(items.<span class="property">indices</span>, items)), id: \.<span class="number">0</span>) { index, item <span class="keyword">in</span>
+</code></pre><p>до крутых навороченных решений (как я уже упоминал, одно из них приведено в ForEach+Binding.swift) Это решение позволяет писать вот так</p><br/><pre><code><span class="keyword">struct</span> ListViewBinding: <span class="type">View</span> {
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span> {
+            <span class="type">ForEach</span>($usersManager.<span class="property">users</span>) { index, user <span class="keyword">in</span>
+                <span class="type">NavigationLink</span>(
+                    destination: <span class="type">UserViewWithBindingReadonly</span>(user: $usersManager.<span class="property">users</span>[index]),
+                    label: { <span class="type">Text</span>(usersManager.<span class="property">users</span>[index].name) }
+                )
+            }
+            .<span class="call">onDelete</span> { indexSet <span class="keyword">in</span>
+                usersManager.<span class="call">removeUsers</span>(indexSet: indexSet)
+            }
+        }
+    }
+}
+</code></pre><p>user внутри ForEach сразу будет типа Binding&lt;User&gt;</p><p>Круто? Круто, вот только падает иногда..</p><p>В секции "With bindings, readonly" выбираем пункт "List with custom bindings", выбираем последнего в списке юзера, заходим на него, жмем Delete. Crash. Ну и если удалять не последний элемент, а первый, то данные внутри открытой View заменятся данными следующего по списку элемента.<br>К счастью теперь у нас есть нативный подход</p><pre><code><span class="type">ForEach</span>($usersManager.<span class="property">users</span>) { $user <span class="keyword">in</span>
+</code></pre><br/><pre><code><span class="keyword">enum</span> UserViewKind {
+    <span class="keyword">case</span> useCache
+    <span class="keyword">case</span> checkDeletion
+    <span class="keyword">case</span> readonly
+    <span class="keyword">case</span> editable
+}
+<span class="keyword">struct</span> ListWithBindingsXcode13: <span class="type">View</span> {
+    <span class="keyword">let</span> userViewKind: <span class="type">UserViewKind</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">List</span> {
+            <span class="type">ForEach</span>($usersManager.<span class="property">users</span>) { $user <span class="keyword">in
+                let</span> _ = <span class="call">print</span>(user)
+                <span class="keyword">switch</span> userViewKind {
+                    <span class="keyword">case</span> .<span class="dotAccess">useCache</span>:
+                        <span class="type">NavigationLink</span>(
+                            destination: <span class="type">UserViewWithBindingReadonlyCheckDeletionCached</span>(user: $user),
+                            label: { <span class="type">Text</span>(<span class="string">"</span>\(user.<span class="property">name</span>)<span class="string">,</span> \(user.<span class="property">surname</span>)<span class="string">"</span>) }
+                        )
+                    <span class="keyword">case</span> .<span class="dotAccess">checkDeletion</span>:
+                        <span class="type">NavigationLink</span>(
+                            destination: <span class="type">UserViewWithBindingReadonlyCheckDeletion</span>(user: $user),
+                            label: { <span class="type">Text</span>(<span class="string">"</span>\(user.<span class="property">name</span>)<span class="string">,</span> \(user.<span class="property">surname</span>)<span class="string">"</span>) }
+                        )
+                    <span class="keyword">case</span> .<span class="dotAccess">readonly</span>:
+                        <span class="type">NavigationLink</span>(
+                            destination: <span class="type">UserViewWithBindingReadonly</span>(user: $user),
+                            label: { <span class="type">Text</span>(<span class="string">"</span>\(user.<span class="property">name</span>)<span class="string">,</span> \(user.<span class="property">surname</span>)<span class="string">"</span>) }
+                        )
+                    <span class="keyword">case</span> .<span class="dotAccess">editable</span>:
+                        <span class="type">NavigationLink</span>(
+                            destination: <span class="type">EditableUserInfoView</span>(user: $user),
+                            label: { <span class="type">Text</span>(<span class="string">"</span>\(user.<span class="property">name</span>)<span class="string">,</span> \(user.<span class="property">surname</span>)<span class="string">"</span>) }
+                        )
+                }
+            }
+            .<span class="call">onDelete</span> { indexSet <span class="keyword">in</span>
+                usersManager.<span class="call">removeUsers</span>(indexSet: indexSet)
+            }
+        }
+    }
+}
+</code></pre><p>К сожалению это работает только в XCode 13. К счастью нет ограничения по iOS 15, есть обратная совместимость и это радует.<br>Проверяем работу удаления для пункта "List with Xcode 13 bindings, no check deletion"<br><br/></p><pre><code><span class="keyword">struct</span> UserViewWithBindingReadonly: <span class="type">View</span> {
+    <span class="keyword">@Binding var</span> user: <span class="type">User</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">UserInfoView</span>(user: user)
+            .<span class="call">withEditNavigationButtons</span>(user: user, usersManager: usersManager)
+    }
+}
+</code></pre><p>Та же проблема, что и для "Simple list without bindings", если на iOS 15 удалять первый элемент в списке - вылетает на список, если другие - визуально ничего не происходит. На iOS 14 вообще визуальной реакции нет на удаления, ничего нового.</p><p>Проверяем работу удаления для пункта "List with Xcode 13 bindings, check deletion"<br><br/></p><pre><code><span class="keyword">struct</span> UserViewWithBindingReadonlyCheckDeletion: <span class="type">View</span> {
+    <span class="keyword">@Binding var</span> user: <span class="type">User</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">@State private var</span> userWasDeleted: <span class="type">Bool</span> = <span class="keyword">false
+    @Environment</span>(\.<span class="property">presentationMode</span>) <span class="keyword">var</span> presentationMode
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">UserInfoView</span>(user: user)
+            .<span class="call">withEditNavigationButtons</span>(user: user, usersManager: usersManager)
+            .<span class="call">alert</span>(isPresented: $userWasDeleted, content: {
+                <span class="type">Alert</span>(
+                    title: <span class="type">Text</span>(<span class="string">"User was deleted"</span>),
+                    dismissButton: <span class="type">Alert</span>.<span class="type">Button</span>.<span class="call">cancel</span>(<span class="type">Text</span>(<span class="string">"OK"</span>), action: {
+                        presentationMode.<span class="property">wrappedValue</span>.<span class="call">dismiss</span>()
+                    })
+                )
+            })
+            .<span class="call">onChange</span>(of: usersManager.<span class="property">users</span>) { users <span class="keyword">in</span>
+
+                <span class="comment">// iOs 15 crash</span>
+
+                <span class="call">print</span>(<span class="string">"UserViewWithBindingReadonlyCheckDeletion (onChange) users update:</span> \(users)<span class="string">, for user</span> \(user)<span class="string">"</span>)
+                <span class="keyword">if</span> !users.<span class="call">map</span>(\.<span class="property">id</span>).<span class="call">contains</span>(user.<span class="property">id</span>) {
+                    userWasDeleted = <span class="keyword">true</span>
+                }
+            }
+<span class="comment">//            .onReceive(usersManager.$users) { users in
+//                print("UserViewWithBindingReadonlyCheckDeletion (onReceive) users update: \(users)")
+//                if !users.map(\.id).contains(user.id) {
+//                    userWasDeleted = true
+//                }
+//            }</span>
+    }
+}
+</code></pre><p>iOS 14: onChange не отрабатывает, фикс идентичен - использовать onReceive. Если попробовать с onChange перейти на navigationViewStyle(StackNavigationViewStyle()) - при удалении последнего элемента будет Crash как в кастомном решении</p><br/><p>iOS 15: onChange - удаление первого выбрасывает в список, удаление среднего ни к чему не приводит, удаление последнего - крэш, собрали все баги, флеш рояль ) onReceive - корректно отрабатывает во всех случаях.</p><br/><p>Чтобы уйти от крэшей можно попробовать воспользоваться системой кеша данных (ну или draft, кому как удобней). Подобное решение применяла Apple можно увидеть <a href="https://developer.apple.com/tutorials/swiftui/working-with-ui-controls">здесь</a></p><p>Основная идея - при показе View - копируем данные и работаем с ними, это позволит уйти от проблемы использования Binding для несуществующего элемента в массиве<br><br/></p><pre><code><span class="keyword">import</span> SwiftUI
+
+<span class="keyword">struct</span> UserViewWithBindingReadonlyCheckDeletionCached: <span class="type">View</span> {
+    <span class="keyword">@Binding var</span> user: <span class="type">User</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+
+    <span class="keyword">@State private var</span> userWasDeleted: <span class="type">Bool</span> = <span class="keyword">false
+    @Environment</span>(\.<span class="property">presentationMode</span>) <span class="keyword">var</span> presentationMode
+
+    <span class="keyword">@State private var</span> cachedUser: <span class="type">User</span> = <span class="type">User</span>(id: .<span class="keyword">init</span>(), name: <span class="string">""</span>, surname: <span class="string">""</span>, birthday: <span class="type">Date</span>(), views: <span class="number">0</span>)
+
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">UserInfoView</span>(user: user)
+            .<span class="call">withEditNavigationButtons</span>(user: user, usersManager: usersManager)
+            .<span class="call">onAppear</span> {
+                cachedUser = user
+            }
+            .<span class="call">alert</span>(isPresented: $userWasDeleted, content: {
+                <span class="type">Alert</span>(
+                    title: <span class="type">Text</span>(<span class="string">"User was deleted"</span>),
+                    dismissButton: <span class="type">Alert</span>.<span class="type">Button</span>.<span class="call">cancel</span>(<span class="type">Text</span>(<span class="string">"OK"</span>), action: {
+                        presentationMode.<span class="property">wrappedValue</span>.<span class="call">dismiss</span>()
+                    })
+                )
+            })
+            .<span class="call">onChange</span>(of: usersManager.<span class="property">users</span>) { users <span class="keyword">in</span>
+                <span class="call">print</span>(<span class="string">"UserViewWithBindingReadonlyCheckDeletionCached (onChange) users update:</span> \(users)<span class="string">, for user</span> \(cachedUser)<span class="string">"</span>)
+                <span class="keyword">if</span> !users.<span class="call">map</span>(\.<span class="property">id</span>).<span class="call">contains</span>(cachedUser.<span class="property">id</span>) {
+                    userWasDeleted = <span class="keyword">true</span>
+                }
+            }
+<span class="comment">//            .onReceive(usersManager.$users) { users in
+//                print("UserViewCheckDeletion (onReceive) users update: \(users)")
+//                if !users.map(\.id).contains(cachedUser.id) {
+//                    userWasDeleted = true
+//                }
+//            }</span>
+    }
+}
+</code></pre><p>По сути главное что поменялось - добавилось<br><br/></p><pre><code>.<span class="call">onAppear</span> {
+     cachedUser = user
+}
+</code></pre><br/><p>Это решение прекрасно отрабатывает с onChange на iOS 15. Но не работает на iOS 14 для удаления любых элементов кроме последнего. Для последнего просто падает )<br>Замена на onReceive выдает баг на обеих осях, связано с тем что мы инициализируем изначально</p><br/><pre><code><span class="keyword">@State private var</span> cachedUser: <span class="type">User</span> = <span class="type">User</span>(id: .<span class="keyword">init</span>(), name: <span class="string">""</span>, surname: <span class="string">""</span>, birthday: <span class="type">Date</span>(), views: <span class="number">0</span>)
+</code></pre><p>А как я уже говорил, onReceive отрабатывает чаще, и на старте мы проверяем наличие этого дефолтного пустого юзера с usersManager.$users, и нам успевает показаться алерт что созданного на старте юзера с id: .init() не существует в массиве (что в принципе правда).</p><br/><p>Все примеры из секции "With bindings, readonly" передавали в дочерние view Binding&lt;User&gt;, хотя по факту не использовали возможностей по их обновлению напрямую, просто не хотел усложнять материал. Так что оставил это на сладкое</p><br/><p>Секция "With bindings, Editable", пункт "List with Xcode 13 bindings, editable"</p><br/><pre><code><span class="keyword">struct</span> EditableUserInfoView: <span class="type">View</span> {
+    <span class="keyword">@Binding var</span> user: <span class="type">User</span>
+    <span class="keyword">@EnvironmentObject var</span> usersManager: <span class="type">UsersManager</span>
+    
+    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> {
+        <span class="type">VStack</span> {
+            <span class="type">TextField</span>(<span class="string">"Name"</span>, text: $user.<span class="property">name</span>)
+                .<span class="call">textFieldStyle</span>(<span class="type">RoundedBorderTextFieldStyle</span>())
+            <span class="type">TextField</span>(<span class="string">"Surname"</span>, text: $user.<span class="property">surname</span>)
+                .<span class="call">textFieldStyle</span>(<span class="type">RoundedBorderTextFieldStyle</span>())
+        }
+        .<span class="call">padding</span>()
+        .<span class="call">withEditNavigationButtons</span>(user: user, usersManager: usersManager)
+    }
+}
+</code></pre><p>В плане редактирования все работает как часы при любом варианте биндингов как через текстовые поля, так и через кнопку Update. В проекте я добавил обвязку через onReceive на проверку удаления, как единственно работающую на всех осях и для любого индекса удаляемого элемента.</p><br/><p>Вот такое вот выдалось приключение "на пару минут" как же сделать список с редактируемыми и удаляемыми в фоне элементами работающий одновременно и в iOS 14 и в iOS 15.</p>]]></content:encoded></item><item><guid isPermaLink="true">https://sparklone.github.io/articles/working-with-data-in-swiftui</guid><title>Как работать с данными в SwiftUI</title><description>Как работать с данными в SwiftUI: @State, @Binding, @StateObject, @ObservedObject, @EnvironmentObject. Разбираемся какие и когда стоит использовать.</description><link>https://sparklone.github.io/articles/working-with-data-in-swiftui</link><pubDate>Sun, 27 Jun 2021 15:30:00 +0300</pubDate><content:encoded><![CDATA[<h1>Как работать с данными в SwiftUI</h1><p>SwiftUI богат обертками для работы с данными. Подробней ознакомиться с тем, что такое Property Wrapper'ы (обертки) и с чем их едят можно в моей предыдущей статье <a href="https://sparklone.github.io/articles/property-wrappers-in-swift/">Property Wrappers в Swift</a></p><p>Так что в этой статье мы рассмотрим практическое применение существующих оберток для работы с данными в SwiftUI.</p><p>Основной момент: если меняется значение внутри переменной любой из указанных оберток, и эта переменная используется внутри переменной body, - переменная body будет вычислена повторно, таким образом View обновится (перерисуется).</p><p>Итак, первой оберткой является State.</p><h2>@State</h2><p>Исходя из документации Apple <a href="https://developer.apple.com/documentation/swiftui/state">State</a> необходимо использовать для хранения данных конкретной View. <a href="https://developer.apple.com/documentation/swiftui/state-and-data-flow">Здесь</a> Apple советует в @State хранить именно UI состояние, а не бизнес логику. <em>"Manage transient UI state locally within a view by wrapping value types as State properties."</em></p><p>Более того очень важно работать с этой переменной только внутри View, где она была объявлена, причем только из переменной body, или из методов которые вызываются из переменной body. Поэтому всегда стоит @State объявлять приватной переменной.</p><p><em>"You should only access a state property from inside the view’s body, or from methods called by it. For this reason, declare your state properties as private, to prevent clients of your view from accessing them. It is safe to mutate state properties from any thread."</em></p><p>Приведу простой пример использования @State, он искусственный (как раз View-счетчик обычно полезно инициализировать значениями извне), но с ним проще играться.</p><pre><code><span class="keyword">import</span> SwiftUI
 
 <span class="keyword">struct</span> SimplestState: <span class="type">View</span> {
     <span class="keyword">@State private var</span> counter = <span class="number">0</span>
